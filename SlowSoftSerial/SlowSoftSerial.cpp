@@ -302,8 +302,8 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
     }
 
     // Initialize transmit
-    digitalWrite(_txPin, _SSS_STOP_LEVEL);
     pinMode(_txPin, OUTPUT);
+    digitalWrite(_txPin, _SSS_STOP_LEVEL);
 
     _tx_buffer_count = 0;
     _tx_write_index = 0;
@@ -482,6 +482,8 @@ void SlowSoftSerial::_tx_handler(void) {
     else {
         _tx_running = false;
         _tx_timer.end();
+        digitalWrite(_txPin, _SSS_STOP_LEVEL);  // just to be sure
+
     }
 }
 
