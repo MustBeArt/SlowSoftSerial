@@ -7,6 +7,8 @@
 #define _SSS_TX_BUFFER_SIZE 64
 #define _SSS_RX_BUFFER_SIZE 64
 
+#define _SSS_MAX_OPTABLE_SIZE 48  // 4 ops per bit, 8E2 is 12 bits long
+
 #define _SSS_MIN_BAUDRATE 1.0       // arbitrary; don't divide by zero.
 
 
@@ -101,21 +103,25 @@ class SlowSoftSerial : public Stream
     bool isListening() { return true; }
 
     // Unfortunately, this has to be public because of the horrific workaround
-    // needed to register a callback with IntervalTimer.
+    // needed to register a callback with IntervalTimer or attachInterrupt.
     void _tx_handler(void);
+    void _rx_timer_handler(void);
+    void _rx_start_handler(void);
 
   private:
     uint16_t _add_parity(uint8_t chr);
     void _be_transmitting(void);
-    void _tx_isr(void);
+    void _fill_op_table(int rxbits, int stopbits);
 
     // port configuration
-    double _baud_microseconds;     // one baud in microseconds
+    double _baud_microseconds;      // one baud in microseconds
+    double _rx_microseconds;        // receive sample rate
     uint16_t _parity;               // use definitions above, like ones in HardwareSerial.h
     uint8_t _num_bits_to_send;      // includes parity and stop bit(s) but not start bit
     uint16_t _parity_bit;           // bitmask for the parity bit; 0 if no parity
-    int16_t _stop_bits;             // bits to OR in to data word
-    uint8_t _forbidden_bits;        // bitmask of bits that don't fit in the word size
+    int16_t _stop_bits;             // bit(s) to OR in to data word
+    uint8_t _databits_mask;         // bitmask of bits that fit in the word size
+    uint16_t _rx_shiftin_bit;       // bit to OR in to data word as received bits shift in
     uint8_t _rxPin;
     uint8_t _txPin;
     bool _inverse;
@@ -126,7 +132,7 @@ class SlowSoftSerial : public Stream
     volatile int _tx_buffer_count;
     int _tx_write_index;
     int _tx_read_index;
-    int _tx_buffer[_SSS_TX_BUFFER_SIZE];
+    uint16_t _tx_buffer[_SSS_TX_BUFFER_SIZE]; // contains data "as sent" with parity and stop bits
 
     // transmit state
     int _tx_data_word;
@@ -135,8 +141,16 @@ class SlowSoftSerial : public Stream
     bool _tx_running = false;
 
     // receive buffer and its variables
+    volatile int _rx_buffer_count;
+    int _rx_write_index;
+    int _rx_read_index;
+    uint16_t _rx_buffer[_SSS_RX_BUFFER_SIZE]; // contains data with parity (no stop bits)
 
     // receive state
-
+    uint8_t _rx_op_table[_SSS_MAX_OPTABLE_SIZE];
+    uint8_t _rx_op;           // index into the operation table
+    uint16_t _rx_data_word;   // word under construction as we receive it
+    int _rx_bit_value;        // bit value as we sample it repeatedly
 
 };
+
