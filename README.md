@@ -45,7 +45,7 @@ no other libraries are adding latency.
 * Uses two of the Periodic Interrupt Timers (of which there are only
 four on the Teensy 3.x)
 
-* Only one actvie SlowSoftSerial port at a time is currently supported,
+* Only one active SlowSoftSerial port at a time is currently supported,
 but you can have multiple ports defined and switch between them.
 
 * No support (yet) for built-in flow control handshaking (because

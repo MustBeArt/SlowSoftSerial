@@ -11,6 +11,9 @@
 
 #define _SSS_MIN_BAUDRATE 1.0       // arbitrary; don't divide by zero.
 
+// Definitions for an extension to the ::end() method
+#define SSS_RETAIN_PINS (true)
+#define SSS_RELEASE_PINS (false)
 
 // Definitions for databits, parity, and stopbits configuration word.
 // These are taken from the official Arduino API, but I've had to rename
@@ -86,7 +89,9 @@ class SlowSoftSerial : public Stream
     void begin(double baudrate, uint16_t config);
     void begin(double baudrate) { begin(baudrate, SSS_SERIAL_8N1); }
 
-    void end();
+    void end(bool releasePins);
+    void end() { end(SSS_RELEASE_PINS); }
+
     int available(void);
     int availableForWrite(void);
     int peek(void);

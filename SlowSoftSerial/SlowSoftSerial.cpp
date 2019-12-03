@@ -307,8 +307,10 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
     }
 
     // Initialize transmit
+    // Writing both before and after eliminates a potential glitch.
+    digitalWriteFast(_txPin, _SSS_STOP_LEVEL);
     pinMode(_txPin, OUTPUT);
-    digitalWrite(_txPin, _SSS_STOP_LEVEL);
+    digitalWriteFast(_txPin, _SSS_STOP_LEVEL);
 
     _tx_buffer_count = 0;
     _tx_write_index = 0;
@@ -332,7 +334,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
 }
 
 
-void SlowSoftSerial::end() {
+void SlowSoftSerial::end(bool releasePins) {
     if (!_instance_active) {
         return;
     }
@@ -340,8 +342,11 @@ void SlowSoftSerial::end() {
     _tx_timer.end();    // called first to avoid any conflict for variables
     _rx_timer.end();
     detachInterrupt(digitalPinToInterrupt(_rxPin));
-    pinMode(_txPin, INPUT);
-    pinMode(_rxPin, INPUT);
+
+    if (releasePins == SSS_RELEASE_PINS) {
+        pinMode(_txPin, INPUT);
+        pinMode(_rxPin, INPUT);
+    }
 
     _tx_buffer_count = 0;
     _tx_enabled = false;
@@ -396,7 +401,7 @@ int SlowSoftSerial::read(void) {
 
 
 void SlowSoftSerial::flush(void) {
-    while (_tx_buffer_count > 0) {
+    while (_tx_buffer_count > 0 || _tx_running) {
         yield();
     }
 }
@@ -484,7 +489,7 @@ void SlowSoftSerial::_tx_handler(void) {
     uint16_t data_as_sent;
 
     if (_tx_bit_count > 0) {
-        digitalWrite(_txPin, _tx_data_word & 0x01);
+        digitalWriteFast(_txPin, _tx_data_word & 0x01);
         _tx_data_word >>= 1;
         _tx_bit_count--;
     }
@@ -495,7 +500,7 @@ void SlowSoftSerial::_tx_handler(void) {
             _tx_read_index = 0;
         }
         _tx_buffer_count--;
-        digitalWrite(_txPin, _SSS_START_LEVEL);
+        digitalWriteFast(_txPin, _SSS_START_LEVEL);
         _tx_data_word = data_as_sent;
         _tx_bit_count = _num_bits_to_send;
     }
@@ -503,8 +508,7 @@ void SlowSoftSerial::_tx_handler(void) {
     else {
         _tx_running = false;
         _tx_timer.end();
-        digitalWrite(_txPin, _SSS_STOP_LEVEL);  // just to be sure
-
+        digitalWriteFast(_txPin, _SSS_STOP_LEVEL);  // just to be sure
     }
 }
 
@@ -529,7 +533,7 @@ void SlowSoftSerial::_be_transmitting(void) {
         if (_tx_timer.begin(_tx_trampoline, _baud_microseconds)) {
             _tx_running = true;
 
-            digitalWrite(_txPin, _SSS_START_LEVEL);
+            digitalWriteFast(_txPin, _SSS_START_LEVEL);
             _tx_data_word = data_as_sent;
             _tx_bit_count = _num_bits_to_send;
         } else {
