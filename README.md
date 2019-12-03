@@ -93,6 +93,15 @@ to SlowSoftSerial at this time).
 * __DuelingPorts__ demonstrates the use of multiple SlowSoftSerial
 ports (with only one being active at a time).
 
+* __VariousParameters__ demonstrates the use of all the various
+data word length, parity type, and stop bit length parameters
+supported by SlowSoftSerial. It sends a short text message with
+each parameter setting, while simultaneously trying to receive
+with the same setting. You can watch the transmissions with a
+terminal emulator or serial analyzer, or you can hook up a jumper
+between the RX and TX pins and see the results in the USB serial
+monitor.
+
 ## License
 
 This project is licensed under GPLv3.
