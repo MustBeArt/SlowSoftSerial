@@ -29,6 +29,7 @@
 // anyway. That capability could be added.
 
 SlowSoftSerial *instance_p = NULL;
+int SlowSoftSerial::_active_count = 0;    // don't allow more than 1
 
 // Forward.
 static void _rx_start_trampoline(void);
@@ -43,11 +44,15 @@ SlowSoftSerial::SlowSoftSerial(uint8_t rxPin, uint8_t txPin, bool inverse) {
     _rxPin = rxPin;
     _txPin = txPin;
     _inverse = inverse;
-    instance_p = this;  // if user goes rogue and makes two, bad things will happen.
+    _instance_active = false;
 }
 
 
 void SlowSoftSerial::begin(double baudrate, uint16_t config) {
+    if (_active_count > 0) {
+        return;
+    }
+
     _tx_timer.end();     // just in case begin is called out of sequence
 
     if (baudrate < _SSS_MIN_BAUDRATE) {
@@ -309,6 +314,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
     _tx_write_index = 0;
     _tx_read_index = 0;
     _tx_enabled = true;
+    _tx_running = false;
 
     // Initialize receive
     pinMode(_rxPin, _inverse ? INPUT_PULLDOWN : INPUT_PULLUP);
@@ -317,11 +323,20 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
     _rx_write_index = 0;
     _rx_read_index = 0;
 
+    // Keep track of our one and only active instance
+    _instance_active = true;
+    _active_count = 1;
+    instance_p = this;
+
     attachInterrupt(digitalPinToInterrupt(_rxPin), _rx_start_trampoline, _inverse ? RISING : FALLING);
 }
 
 
 void SlowSoftSerial::end() {
+    if (!_instance_active) {
+        return;
+    }
+
     _tx_timer.end();    // called first to avoid any conflict for variables
     _rx_timer.end();
     detachInterrupt(digitalPinToInterrupt(_rxPin));
@@ -330,6 +345,12 @@ void SlowSoftSerial::end() {
 
     _tx_buffer_count = 0;
     _tx_enabled = false;
+    _tx_running = false;
+
+    // this instance is no longer active, so it's OK to activate another one
+    instance_p = NULL;
+    _active_count = 0;
+    _instance_active = false;
 }
 
 
@@ -505,13 +526,15 @@ void SlowSoftSerial::_be_transmitting(void) {
         }
         _tx_buffer_count--;
 
-        _tx_timer.begin(_tx_trampoline, _baud_microseconds); //whoa
-        _tx_running = true;
+        if (_tx_timer.begin(_tx_trampoline, _baud_microseconds)) {
+            _tx_running = true;
 
-        digitalWrite(_txPin, _SSS_START_LEVEL);
-        _tx_data_word = data_as_sent;
-        _tx_bit_count = _num_bits_to_send;
-
+            digitalWrite(_txPin, _SSS_START_LEVEL);
+            _tx_data_word = data_as_sent;
+            _tx_bit_count = _num_bits_to_send;
+        } else {
+            end();
+        }
     }
 }
 
@@ -552,10 +575,13 @@ void SlowSoftSerial::_fill_op_table(int rxbits, int stopbits) {
 
 void SlowSoftSerial::_rx_start_handler(void) {
 
-    _rx_timer.begin(_rx_timer_trampoline, _rx_microseconds);
-    detachInterrupt(digitalPinToInterrupt(_rxPin));
-    _rx_op = 0;     // start at the 0th operation in the table
-
+    if (_rx_timer.begin(_rx_timer_trampoline, _rx_microseconds)) {
+        detachInterrupt(digitalPinToInterrupt(_rxPin));
+        _rx_op = 0;     // start at the 0th operation in the table
+    } else {
+        // timer not available, but there isn't much we can do.
+        // continue to try every time we see a start bit!
+    }
 }
 
 

@@ -45,7 +45,8 @@ no other libraries are adding latency.
 * Uses two of the Periodic Interrupt Timers (of which there are only
 four on the Teensy 3.x)
 
-* Only one SlowSoftSerial port at a time is currently supported.
+* Only one actvie SlowSoftSerial port at a time is currently supported,
+but you can have multiple ports defined and switch between them.
 
 * No support (yet) for built-in flow control handshaking (because
 Cadetwriter does flow control at the application level)
@@ -88,6 +89,9 @@ emulator and you can type back and forth between the terminal emulator
 and the Arduino IDE's serial monitor. Try pasting a longer text into
 the terminal emulator (but note, there is no flow control built in
 to SlowSoftSerial at this time).
+
+* __DuelingPorts__ demonstrates the use of multiple SlowSoftSerial
+ports (with only one being active at a time).
 
 ## License
 

@@ -109,6 +109,9 @@ class SlowSoftSerial : public Stream
     void _rx_start_handler(void);
 
   private:
+    static int _active_count;
+    bool _instance_active;
+
     uint16_t _add_parity(uint8_t chr);
     void _be_transmitting(void);
     void _fill_op_table(int rxbits, int stopbits);
