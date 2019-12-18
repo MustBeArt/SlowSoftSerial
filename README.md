@@ -1,7 +1,7 @@
 # SlowSoftSerial serial library for Teensyduino
 
 SlowSoftSerial is another alternative serial port library for
-a Teensy 3.x board under the Arduino environment.
+a Teensy 3.x or 4.x board under the Arduino environment.
 
 It was originally created for the
 [Cadetwriter](https://github.com/IBM-1620/Cadetwriter) project,
@@ -39,11 +39,12 @@ the way you expect
 
 * Sensitive to interrupt latency from other libraries. Speed limit
 of 9600 baud assumes other libraries impose up to 15 microseconds of
-interrupt latency. Higher speeds (up to about 28800) are possible if
-no other libraries are adding latency.
+interrupt latency. Higher speeds (up to about 28800 on Teensy 3.5 or
+115200 on Teensy 4.0) are possible if no other libraries are adding
+latency.
 
 * Uses two of the Periodic Interrupt Timers (of which there are only
-four on the Teensy 3.x)
+four on the Teensy 3.x or 4.0)
 
 * Only one active SlowSoftSerial port at a time is currently supported,
 but you can have multiple ports defined and switch between them.
@@ -53,7 +54,7 @@ Cadetwriter does flow control at the application level)
 
 ## Installation
 
-Assuming you're already programming a Teensy 3.x board under the
+Assuming you're already programming a Teensy 3.x or 4.0 board under the
 Arduino IDE environment,
 
 * Clone or download this repository
@@ -106,8 +107,8 @@ monitor.
 
 This project is licensed under GPLv3.
 
-## Maturity = Early Alpha
+## Maturity = Late Alpha
 
-SlowSoftSerial just started working at all on 2019-12-01. It has not
-yet been subjected to extensive testing, and there is more work to be
-done. It might work for you, if you're feeling adventurous.
+SlowSoftSerial has been bench tested on Teensy 3.5 and Teensy 4.0,
+and has been successfully integrated with the Cadetwriter firmware,
+but it has not been battle tested in the field yet.
