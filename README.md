@@ -7,8 +7,8 @@ It was originally created for the
 [Cadetwriter](https://github.com/IBM-1620/Cadetwriter) project,
 because the hardware serial ports on Teensy 3.5 don't work at
 standard baud rates slower than 1200 baud, and AltSoftSerial
-doesn't work on the same pins as the Serial1 UART or at all the
-needed word length, parity, and stop bit settings.
+doesn't work on the same pins as the Serial1 UART or at all of
+the needed word length, parity, and stop bit settings.
 
 ## Features
 
@@ -35,6 +35,8 @@ and AltSoftSerial
 * Standard Arduino Serial API interface, so most everything works
 the way you expect
 
+* Optional hardware handshaking (CTS) on transmit on any GPIO pin
+
 ## Limitations
 
 * Sensitive to interrupt latency from other libraries. Speed limit
@@ -49,8 +51,11 @@ four on the Teensy 3.x or 4.0)
 * Only one active SlowSoftSerial port at a time is currently supported,
 but you can have multiple ports defined and switch between them.
 
-* No support (yet) for built-in flow control handshaking (because
-Cadetwriter does flow control at the application level)
+* No support (yet) for built-in hardware flow control handshaking on
+receive (because Cadetwriter does this at the application level).
+
+* No support (yet) for built-in software XON/XOFF flow control in
+either direction.
 
 ## Installation
 
@@ -82,7 +87,7 @@ port's ability to start and stop transmitting on any character
 boundary. Then it transmits the same poem at full speed, and repeats
 forever. It simultaneously sends the same characters to the USB Serial
 port, so you can monitor its progress in the Arduino IDE's serial
-monitor.
+monitor. The demo enables CTS hardware handshaking on transmit.
 
 * __SerialPassthrough__ connects a SlowSoftSerial port to the USB
 Serial port, in both directions. Wire up your port to a terminal

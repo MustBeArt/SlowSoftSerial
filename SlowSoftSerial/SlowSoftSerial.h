@@ -107,6 +107,12 @@ class SlowSoftSerial : public Stream
     bool listen() { return false; }
     bool isListening() { return true; }
 
+    // The standard Arduino serial API doesn't support handshaking, but the
+    // Teensyduino UART API does support hardware handshaking. We adopt their
+    // API.
+    // void attachRts(uint8_t); not yet implemented
+    void attachCts(uint8_t);
+
     // Unfortunately, this has to be public because of the horrific workaround
     // needed to register a callback with IntervalTimer or attachInterrupt.
     void _tx_handler(void);
@@ -118,7 +124,6 @@ class SlowSoftSerial : public Stream
     bool _instance_active;
 
     uint16_t _add_parity(uint8_t chr);
-    void _be_transmitting(void);
     void _fill_op_table(int rxbits, int stopbits);
 
     // port configuration
@@ -132,6 +137,10 @@ class SlowSoftSerial : public Stream
     uint16_t _rx_shiftin_bit;       // bit to OR in to data word as received bits shift in
     uint8_t _rxPin;
     uint8_t _txPin;
+    uint8_t _rtsPin;
+    uint8_t _ctsPin;
+    bool _rts_attached;
+    bool _cts_attached;
     bool _inverse;
     IntervalTimer _tx_timer;
     IntervalTimer _rx_timer;    

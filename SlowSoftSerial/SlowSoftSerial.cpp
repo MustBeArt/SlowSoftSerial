@@ -3,6 +3,7 @@
 
 #define _SSS_START_LEVEL (_inverse ? HIGH : LOW)
 #define _SSS_STOP_LEVEL  (_inverse ? LOW : HIGH)
+#define CTS_ASSERTED     (_inverse ? (digitalRead(_ctsPin) == HIGH) : (digitalRead(_ctsPin) == LOW))
 
 // Operations of receive processing. These go in the op table to schedule
 // processing that occurs on receive timer interrupts. See design notes.
@@ -34,7 +35,7 @@ int SlowSoftSerial::_active_count = 0;    // don't allow more than 1
 // Forward.
 static void _rx_start_trampoline(void);
 static void _rx_timer_trampoline(void);
-
+static void _tx_trampoline(void);
 
 ///////////////////////////////////////////////////////////////////////
 //  Public Member Functions
@@ -475,6 +476,9 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
     _tx_buffer_count = 0;
     _tx_write_index = 0;
     _tx_read_index = 0;
+    _tx_bit_count = 0;
+    _rts_attached = false;
+    _cts_attached = false;
     _tx_enabled = true;
     _tx_running = false;
 
@@ -506,11 +510,13 @@ void SlowSoftSerial::end(bool releasePins) {
     if (releasePins == SSS_RELEASE_PINS) {
         pinMode(_txPin, INPUT);
         pinMode(_rxPin, INPUT);
+        pinMode(_ctsPin, INPUT);
     }
 
     _tx_buffer_count = 0;
     _tx_enabled = false;
     _tx_running = false;
+    _cts_attached = false;
 
     // this instance is no longer active, so it's OK to activate another one
     instance_p = NULL;
@@ -560,6 +566,8 @@ int SlowSoftSerial::read(void) {
 }
 
 
+// NOTE: flush() can take unbounded time to complete
+//       if CTS flow control is in use.
 void SlowSoftSerial::flush(void) {
     while (_tx_buffer_count > 0 || _tx_running) {
         yield();
@@ -596,9 +604,23 @@ size_t SlowSoftSerial::write(uint8_t chr) {
     _tx_buffer_count++;
     interrupts();
 
-    _be_transmitting();
+    // Start the baud rate interrupt if it isn't already running
+    // Note: we waste a baud before starting to transmit, in order
+    // to keep the transmit logic all in one place (the interrupt)
+    if (!_tx_running) {
+        if (_tx_timer.begin(_tx_trampoline, _baud_microseconds)) {
+            _tx_running = true;
+        }
+    }
 
     return 1;     // We "sent" the one character
+}
+
+
+void SlowSoftSerial::attachCts(uint8_t pin_number) {
+    _ctsPin = pin_number;
+    _cts_attached = true;
+    pinMode(_ctsPin, _inverse ? INPUT_PULLUP : INPUT_PULLDOWN);
 }
 
 
@@ -645,61 +667,48 @@ uint16_t SlowSoftSerial::_add_parity(uint8_t chr) {
 }
 
 
+// Handle the transmit interrupt
+// Interrupt occurs once per baud while we're actively transmitting
+// or waiting for handshaking to allow transmitting.
 void SlowSoftSerial::_tx_handler(void) {
     uint16_t data_as_sent;
 
     if (_tx_bit_count > 0) {
+        // We're in the middle of sending a character, keep sending it
         digitalWriteFast(_txPin, _tx_data_word & 0x01);
         _tx_data_word >>= 1;
         _tx_bit_count--;
+        return;
     }
 
-    else if (_tx_enabled && _tx_buffer_count > 0) {
-        data_as_sent = _tx_buffer[_tx_read_index++];
-        if (_tx_read_index >= _SSS_TX_BUFFER_SIZE) {
-            _tx_read_index = 0;
-        }
-        _tx_buffer_count--;
-        digitalWriteFast(_txPin, _SSS_START_LEVEL);
-        _tx_data_word = data_as_sent;
-        _tx_bit_count = _num_bits_to_send;
-    }
-
-    else {
+    if (_tx_buffer_count == 0) {
+        // Nothing more to transmit right now, shut it down
         _tx_running = false;
         _tx_timer.end();
         digitalWriteFast(_txPin, _SSS_STOP_LEVEL);  // just to be sure
+        return;
     }
+
+    if (!_tx_enabled || (_cts_attached && !CTS_ASSERTED)) {
+        // we are not allowed to transmit right now.
+        // keep the timer interrupt running, we'll poll.
+        return;
+    }
+
+    // Get the next character and begin to send it
+    data_as_sent = _tx_buffer[_tx_read_index++];
+    if (_tx_read_index >= _SSS_TX_BUFFER_SIZE) {
+        _tx_read_index = 0;
+    }
+    _tx_buffer_count--;
+    digitalWriteFast(_txPin, _SSS_START_LEVEL);
+    _tx_data_word = data_as_sent;
+    _tx_bit_count = _num_bits_to_send;
 }
 
 
 void _tx_trampoline(void) {
     instance_p->_tx_handler();
-}
-
-
-// runs only in foreground
-void SlowSoftSerial::_be_transmitting(void) {
-    uint16_t data_as_sent;
-
-    if (_tx_enabled && !_tx_running && _tx_buffer_count > 0) {
-        // Safe here, because the ISR is not running
-        data_as_sent = _tx_buffer[_tx_read_index++];
-        if (_tx_read_index >= _SSS_TX_BUFFER_SIZE) {
-            _tx_read_index = 0;
-        }
-        _tx_buffer_count--;
-
-        if (_tx_timer.begin(_tx_trampoline, _baud_microseconds)) {
-            _tx_running = true;
-
-            digitalWriteFast(_txPin, _SSS_START_LEVEL);
-            _tx_data_word = data_as_sent;
-            _tx_bit_count = _num_bits_to_send;
-        } else {
-            end();
-        }
-    }
 }
 
 
