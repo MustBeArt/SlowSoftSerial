@@ -110,7 +110,7 @@ class SlowSoftSerial : public Stream
     // The standard Arduino serial API doesn't support handshaking, but the
     // Teensyduino UART API does support hardware handshaking. We adopt their
     // API.
-    void attachRts(uint8_t pin_number, int8_t rts_threshold);
+    void attachRts(uint8_t pin_number, int8_t rts_threshold = -10);
     void attachCts(uint8_t pin_number);
 
     // Unfortunately, this has to be public because of the horrific workaround
