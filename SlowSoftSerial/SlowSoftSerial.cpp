@@ -511,6 +511,7 @@ void SlowSoftSerial::end(bool releasePins) {
         pinMode(_txPin, INPUT);
         pinMode(_rxPin, INPUT);
         pinMode(_ctsPin, INPUT);
+        pinMode(_rtsPin, INPUT);
     }
 
     _tx_buffer_count = 0;
