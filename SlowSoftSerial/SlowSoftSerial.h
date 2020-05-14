@@ -110,8 +110,8 @@ class SlowSoftSerial : public Stream
     // The standard Arduino serial API doesn't support handshaking, but the
     // Teensyduino UART API does support hardware handshaking. We adopt their
     // API.
-    // void attachRts(uint8_t); not yet implemented
-    void attachCts(uint8_t);
+    void attachRts(uint8_t pin_number, int8_t rts_threshold);
+    void attachCts(uint8_t pin_number);
 
     // Unfortunately, this has to be public because of the horrific workaround
     // needed to register a callback with IntervalTimer or attachInterrupt.
@@ -125,6 +125,7 @@ class SlowSoftSerial : public Stream
 
     uint16_t _add_parity(uint8_t chr);
     void _fill_op_table(int rxbits, int stopbits);
+    inline void _update_rts(void);
 
     // port configuration
     double _baud_microseconds;      // one baud in microseconds
@@ -139,6 +140,7 @@ class SlowSoftSerial : public Stream
     uint8_t _txPin;
     uint8_t _rtsPin;
     uint8_t _ctsPin;
+    uint8_t _rts_threshold;
     bool _rts_attached;
     bool _cts_attached;
     bool _inverse;

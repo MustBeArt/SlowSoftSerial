@@ -560,6 +560,9 @@ int SlowSoftSerial::read(void) {
         noInterrupts();
         _rx_buffer_count--;
         interrupts();
+        if (_rts_attached) {
+            _update_rts();
+        }
     }
 
     return chr;
@@ -621,6 +624,26 @@ void SlowSoftSerial::attachCts(uint8_t pin_number) {
     _ctsPin = pin_number;
     _cts_attached = true;
     pinMode(_ctsPin, _inverse ? INPUT_PULLUP : INPUT_PULLDOWN);
+}
+
+
+void SlowSoftSerial::attachRts(uint8_t pin_number, int8_t threshold) {
+    _rtsPin = pin_number;
+    _rts_attached = true;
+    if (threshold < 0) {
+        // negative threshold means we're to drop RTS when that many
+        // free character positions are left in the buffer. Use this
+        // when you need a known amount of time to respond to RTS but
+        // don't care much about how much backlog builds up in the buffer.
+        threshold += _SSS_RX_BUFFER_SIZE;
+    }
+    // positive threshold means we're to drop RTS when that many
+    // characters are stored in the buffer. Use this when you need
+    // to regulate the backlog of characters stored in the buffer.
+    _rts_threshold = threshold;
+
+    pinMode(_rtsPin, OUTPUT);
+    _update_rts();
 }
 
 
@@ -851,6 +874,9 @@ void SlowSoftSerial::_rx_timer_handler(void) {
                     }
                     
                     _rx_buffer_count++;
+                    if (_rts_attached) {
+                        _update_rts();
+                    }
                 }
             }
             // stop the timer and go back to waiting for a start bit.
@@ -868,4 +894,13 @@ void SlowSoftSerial::_rx_timer_handler(void) {
 
 void _rx_timer_trampoline(void) {
     instance_p->_rx_timer_handler();
+}
+
+
+inline void SlowSoftSerial::_update_rts(void) {
+    if (_rx_buffer_count >= _rts_threshold) {
+        digitalWriteFast(_rtsPin, _inverse ? LOW : HIGH);
+    } else {
+        digitalWriteFast(_rtsPin, _inverse ? HIGH : LOW);
+    }
 }

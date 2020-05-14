@@ -37,6 +37,9 @@ the way you expect
 
 * Optional hardware handshaking (CTS) on transmit on any GPIO pin
 
+* Optional hardware handshaking (RTS) on receive on any GPIO pin, with
+user-specified buffer threshold.
+
 ## Limitations
 
 * Sensitive to interrupt latency from other libraries. Speed limit
@@ -50,9 +53,6 @@ four on the Teensy 3.x or 4.0)
 
 * Only one active SlowSoftSerial port at a time is currently supported,
 but you can have multiple ports defined and switch between them.
-
-* No support (yet) for built-in hardware flow control handshaking on
-receive (because Cadetwriter does this at the application level).
 
 * No support (yet) for built-in software XON/XOFF flow control in
 either direction.
@@ -93,8 +93,8 @@ monitor. The demo enables CTS hardware handshaking on transmit.
 Serial port, in both directions. Wire up your port to a terminal
 emulator and you can type back and forth between the terminal emulator
 and the Arduino IDE's serial monitor. Try pasting a longer text into
-the terminal emulator (but note, there is no flow control built in
-to SlowSoftSerial at this time).
+the terminal emulator (but note, there is no flow control enabled
+in this demo).
 
 * __DuelingPorts__ demonstrates the use of multiple SlowSoftSerial
 ports (with only one being active at a time).
@@ -107,6 +107,12 @@ with the same setting. You can watch the transmissions with a
 terminal emulator or serial analyzer, or you can hook up a jumper
 between the RX and TX pins and see the results in the USB serial
 monitor.
+
+* __RtsSlowReceive__ is like SerialPassthrough, but adds artificial
+delays to simulate a slow receiving process (such as a character
+printer) and enables RTS hardware handshaking. If your terminal
+emulator honors RTS correctly for hardware handshaking, there should
+be no data loss.
 
 ## License
 
