@@ -1,0 +1,26 @@
+{
+  "cmake.environment": {
+"PICO_SDK_PATH":"/Users/kb5mu/Documents/pico/pico-sdk"
+  },
+  "cmake.configureOnOpen": true,
+  // These settings tweaks to the cmake plugin will ensure
+  // that you debug using cortex-debug instead of trying to launch
+  // a Pico binary on the host
+  "cmake.statusbar.advanced": {
+      "debug": {
+          "visibility": "hidden"
+      },
+      "launch": {
+          "visibility": "hidden"
+      },
+      "build": {
+          "visibility": "hidden"
+      },
+      "buildTarget": {
+          "visibility": "hidden"
+      }
+  },
+  "cmake.buildBeforeRun": true,
+"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+"cmake.sourceDirectory": "${workspaceFolder}"
+}
