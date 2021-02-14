@@ -9,6 +9,8 @@ SlowSoftSerial sss(0,1);
 #define TFEND   0x1C  /* Transposed frame end */
 #define TFESC   0x1D  /* Transposed frame escape */
 
+#define CHARACTERS_IN_CRC 8 // 32-bit CRC, sent 4 bits per character
+
 #define PACKET_BUF_SIZE 1000
 unsigned char packet_buf[PACKET_BUF_SIZE];
 
@@ -72,7 +74,6 @@ if (bufp >= buf+max_length)
 return (bufp - buf);      // return length of buffer
 }
 
-// Thanks https://excamera.com/sphinx/article-crc.html for the CRC routine
 static uint32_t crc_table[16] = {
     0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
     0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
@@ -105,11 +106,19 @@ bool check_packet_crc(unsigned char *buf, int len)
   unsigned long crc = ~0L;
   unsigned long packet_crc;
   
-  for (int i=0; i < (len-4); i++) {
+  for (int i=0; i < (len-CHARACTERS_IN_CRC); i++) {
     crc = crc_update(crc, buf[i]);
   }
   crc = ~crc;
-  packet_crc = buf[len-4] << 24 | buf[len-3] << 16 | buf[len-2] << 8 | buf[len-1];
+  packet_crc = buf[len-CHARACTERS_IN_CRC] << 28
+             | buf[len-CHARACTERS_IN_CRC+1] << 24
+             | buf[len-CHARACTERS_IN_CRC+2] << 20
+             | buf[len-CHARACTERS_IN_CRC+3] << 16
+             | buf[len-CHARACTERS_IN_CRC+4] << 12
+             | buf[len-CHARACTERS_IN_CRC+5] << 8
+             | buf[len-CHARACTERS_IN_CRC+6] << 4
+             | buf[len-CHARACTERS_IN_CRC+7];
+
   return crc == packet_crc;
 }
 
@@ -122,12 +131,16 @@ int add_packet_crc(unsigned char *buf, int len)
     crc = crc_update(crc, buf[i]);
   }
   crc = ~crc;
-  buf[len] = (crc >> 24) & 0xff;
-  buf[len+1] = (crc >> 16) & 0xff;
-  buf[len+2] = (crc >> 8) & 0xff;
-  buf[len+3] = crc & 0xff;
+  buf[len]   = (crc >> 28) & 0x0f;
+  buf[len+1] = (crc >> 24) & 0x0f;
+  buf[len+2] = (crc >> 20) & 0x0f;
+  buf[len+3] = (crc >> 16) & 0x0f;
+  buf[len+4] = (crc >> 12) & 0x0f;
+  buf[len+5] = (crc >>  8) & 0x0f;
+  buf[len+6] = (crc >>  4) & 0x0f;
+  buf[len+7] = crc & 0x0f;
 
-  return(len+4);
+  return(len+CHARACTERS_IN_CRC);
 }
 
 
