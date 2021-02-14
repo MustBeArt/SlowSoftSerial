@@ -24,10 +24,10 @@
 
 		/* Special characters for KISS */
 
-#define	FEND		0300	/* Frame End */
-#define	FESC		0333	/* Frame Escape */
-#define	TFEND		0334	/* Transposed frame end */
-#define	TFESC		0335	/* Transposed frame escape */
+#define	FEND		0x10	/* Frame End */
+#define	FESC		0x1B	/* Frame Escape */
+#define	TFEND		0x1C	/* Transposed frame end */
+#define	TFESC		0x1D	/* Transposed frame escape */
 
 
 /***************************************************************\
