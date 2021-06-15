@@ -144,6 +144,52 @@ int add_packet_crc(unsigned char *buf, int len)
 }
 
 
+void dump_packet_buf(int len, bool crc_good) {
+  static long msg_count = 0;
+  char fbuf[20];    // local formatting buffer
+  
+  Serial.print("Frame: ");
+  Serial.print(msg_count++);
+
+  if (len >= 2+CHARACTERS_IN_CRC) {
+    switch(packet_buf[0]) {
+      case 0:   Serial.print("  Cmd");
+                break;
+      case 1:   Serial.print("  Rsp");
+                break;
+      case 2:   Serial.print("  Dbg");
+                break;
+      default:  sprintf(fbuf, " 0x%2X", (int)packet_buf[0]);
+                Serial.print(fbuf);
+                break;
+    }
+
+    switch(packet_buf[1]) {
+      case 0:   Serial.print("    NOP");
+                break;
+      case 1:   Serial.print("     ID");
+                break;
+      case 2:   Serial.print("   ECHO");
+                break;
+      case 3:   Serial.print(" BABBLE");
+                break;
+      case 4:   Serial.print(" PARAMS");
+                break;
+      default:  sprintf(fbuf, "   0x%2X", (int)packet_buf[1]);
+                Serial.print(fbuf);
+                break;
+    }
+  }
+
+  Serial.print(" Len: ");
+  Serial.print(len);
+  Serial.print(" CRC: ");
+  Serial.print(crc_good ? "Good" : "Bad");
+  Serial.println();
+
+}
+
+
 void setup() {
   Serial.begin(9600);
   sss.begin(9600, SSS_SERIAL_8N1);
@@ -161,13 +207,12 @@ void loop() {
   bool crc_good;
   
   len = get_frame(packet_buf, PACKET_BUF_SIZE);
-  Serial.print("Got a frame of length ");
-  Serial.print(len);
 
-  if (len > 4) {
+  if (len > 8) {
     crc_good = check_packet_crc(packet_buf, len);
-    Serial.print(crc_good ? " CRC good" : " CRC check failed");
+  } else {
+    crc_good = 0;
   }
 
-  Serial.println("");
+  dump_packet_buf(len, crc_good);
 }
