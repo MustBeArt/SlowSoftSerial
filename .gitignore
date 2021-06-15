@@ -1,3 +1,4 @@
 .DS_Store
 build/
 .cortex-debug.*
+test/autotest-uut/SlowSoftSerial.*
