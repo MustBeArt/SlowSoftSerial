@@ -10,14 +10,16 @@
           "cwd": "${workspaceRoot}",
           "executable": "${command:cmake.launchTargetPath}",
           "request": "launch",
-          "servertype": "external",
-          // This may need to be gdb-multiarch depending on your system
-          //"gdbpath" : "arm-none-eabi-gdb",
           // Connect to an already running OpenOCD instance
-          "gdbTarget": "localhost:3333",
+          //    "servertype": "external",
+          //    "gdbTarget": "localhost:3333",
+          // or try to launch our own OpenOCD instance
+          "servertype": "openocd",
+          //"gdbpath" : "arm-none-eabi-gdb",
+
           "configFiles": [
-              "/interfaces/picoprobe.cfg",
-              "/target/rp2040.cfg"
+              "interface/picoprobe.cfg",
+              "target/rp2040.cfg"
           ],
           "svdFile": "/Users/kb5mu/Documents/pico/pico-sdk/src/rp2040/hardware_regs/rp2040.svd",
           "runToMain": true,
@@ -25,7 +27,8 @@
           "postRestartCommands": [
               "break main",
               "continue"
-          ]
+          ],
+          "searchDir": ["/Users/kb5mu/Documents/pico/openocd/tcl"],
       }
   ]
 }

@@ -22,5 +22,6 @@
   },
   "cmake.buildBeforeRun": true,
 "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+"cortex-debug.openocdPath": "/Users/kb5mu/Documents/pico/openocd/src/openocd",
 "cmake.sourceDirectory": "${workspaceFolder}"
 }
