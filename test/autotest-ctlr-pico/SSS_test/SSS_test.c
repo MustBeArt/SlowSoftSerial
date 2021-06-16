@@ -15,9 +15,21 @@
 #define UART_TX_PIN 4
 #define UART_RX_PIN 5
 
-// GPIO defines
-// Example uses GPIO 2
-#define GPIO 2
+// Pin for on-board LED
+#define LED_PIN PICO_DEFAULT_LED_PIN
+
+// Packet Command Structure
+//   First Byte:
+#define DIR_CMD 0
+#define DIR_RSP 1
+#define DIR_DBG 2
+//   Second Byte:
+#define CMD_NOP    0
+#define CMD_ID     1
+#define CMD_ECHO   2
+#define CMD_BABBLE 3
+#define CMD_PARAMS 4
+#define CMD_EXT    0x1f
 
 
 #define	BUFLEN 600		/* big enough for all bytes to be transposed */
@@ -192,12 +204,23 @@ int add_packet_crc(unsigned char *buf, int len)
   return(len+CHARACTERS_IN_CRC);
 }
 
-unsigned char test_frame[] = "Hello world, this is a dumb test frame.";
+
+void put_frame_with_LED(unsigned char *buf, int len)
+{
+  gpio_put(LED_PIN, 1);
+  put_frame(buf, len);
+  uart_tx_wait_blocking(UART_ID);
+  gpio_put(LED_PIN, 0);
+}
+
+unsigned char test_frame[] = { DIR_CMD, CMD_NOP, 'H', 'e', 'l', 'l', 'o', ' ', 'N', 'O', 'P', 0 };
+int test_frame_length = sizeof(test_frame);
 
 int main()
 {
     uint actual_baudrate;
     unsigned char buffer[BUFLEN];
+    unsigned long iteration;
 
     stdio_init_all();
 
@@ -209,30 +232,26 @@ int main()
     // Set datasheet for more information on function select
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-    
 
-    // GPIO initialisation.
-    // We will make this GPIO an input, and pull it up by default
-    gpio_init(GPIO);
-    gpio_set_dir(GPIO, GPIO_IN);
-    gpio_pull_up(GPIO);
-    
+    // Set up LED to blink when transmitting
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
+
+    sleep_ms(3000);
     puts("Hello, this is the Slow Soft Serial tester");
 
     uart_puts(UART_ID, "Hello UART number one!\r\n");
     uart_tx_wait_blocking(UART_ID);
     sleep_ms(100);
 
-    for (int i=0; i <= strlen(test_frame); i++) {
-        strcpy(buffer, test_frame);
-        for (int j=0; j < i; j++) {
-          buffer[j] &= WORD_WIDTH_MASK;
-        }
+    iteration = 0;
+    while (1) {
 
-        put_frame(buffer, add_packet_crc(buffer, i));
-        puts("Sent dumb test frame with crc");
+      memcpy(buffer, test_frame, test_frame_length);
+      put_frame_with_LED(buffer, add_packet_crc(buffer, test_frame_length));
+      printf("%ld Sent test frame with crc\n", iteration++);
 
-        sleep_ms(500);
+      sleep_ms(500);
     }
 
     return 0;
