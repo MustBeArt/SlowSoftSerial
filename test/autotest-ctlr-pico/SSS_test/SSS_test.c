@@ -394,8 +394,9 @@ void get_a_nop_response(void)
       response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
       if ((response_len >= (2 + CHARACTERS_IN_CRC))
           && (buffer[0] == DIR_RSP)
-          && (buffer[1] == CMD_NOP)) {
-        puts("UUT NOP heard");
+          && (buffer[1] == CMD_NOP)
+          && check_packet_crc(buffer, response_len)) {
+        return;
         return;
       }
     }
@@ -422,7 +423,8 @@ void obtain_uut_info(void) {
       response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
       if ((response_len >= (2 + CHARACTERS_IN_CRC))
           && (buffer[0] == DIR_RSP)
-          && (buffer[1] == CMD_ID)) {
+          && (buffer[1] == CMD_ID)
+          && check_packet_crc(buffer, response_len)) {
         buffer[response_len] = 0;   // null terminate response
         printf("UUT Info: %s\n", buffer+2);
         return;
