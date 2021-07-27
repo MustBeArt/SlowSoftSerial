@@ -9,12 +9,14 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/divider.h"
 #include "hardware/irq.h"
 #include "hardware/regs/intctrl.h"
+#include "SlowSoftSerial.h"
 
 // UART defines
 // By default the stdout UART is `uart0`, so we will use the second one
@@ -27,10 +29,19 @@
 #define UART_RX_PIN 5
 
 // By convention, we start every test at 9600 baud, 8N1
+// These definitions are for the local UART
 #define INITIAL_BAUD_RATE 9600
 #define INITIAL_WORD_WIDTH 8
 #define INITIAL_PARITY UART_PARITY_NONE
 #define INITIAL_STOP_BITS 1
+// and these definitions are for the UUT
+double current_baud = 9600.0;
+int current_width = SSS_SERIAL_DATA_8;
+int current_parity = SSS_SERIAL_PARITY_NONE;
+int current_stopbits = SSS_SERIAL_STOP_BIT_1;
+
+// In serial configuration changes, 0 means leave that parameter alone
+#define STET 0
 
 // Pin for on-board LED
 #define LED_PIN PICO_DEFAULT_LED_PIN
@@ -479,8 +490,76 @@ void obtain_uut_info(void) {
 }
 
 
-unsigned char test_frame[] = { DIR_CMD, CMD_NOP, 'H', 'e', 'l', 'l', 'o', ' ', 'N', 'O', 'P', 0 };
-int test_frame_length = sizeof(test_frame);
+// Send a PARAMS packet and wait for the response.
+void set_params(double baud, uint16_t config) {
+
+  unsigned char params_cmd[2 + CHARACTERS_IN_CRC * 3] = { DIR_CMD, CMD_PARAMS };
+  uint32_t millibaud = baud * 1000;
+  int response_len;
+  int max_tries = 3;    // try receiving response several times
+
+  encode_uint32(params_cmd+2, millibaud);
+  encode_uint32(params_cmd+2+8, config);
+  add_packet_crc(params_cmd, 18);
+
+  while (1) {
+    put_frame_with_LED(params_cmd, 26);
+
+    for (int i=0; i < max_tries; i++) {
+      response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
+      if ((response_len == 26)
+          && (buffer[0] == DIR_RSP)
+          && (memcmp(buffer+1, params_cmd+1, 17) == 0)
+          && check_packet_crc(buffer, 26)) {
+            printf("Set baud=%.03f config=0x%04x\n", floor(baud), config);
+            return;
+          }
+    }
+  }
+}
+
+
+// Complete a change in speed or serial parameters. This includes sending
+// the command packet, getting the response, and transitioning the local
+// UART to the new settings.
+// If any argument is set to 0, that means leave that setting alone.
+// The encoding of each config argument is per the SlowSoftSerial specification,
+// which implies the non-zero ones can be ORed together to make a config code.
+void change_params(double baud, int width, int parity, int stopbits) {
+
+  if (baud != STET) {
+    current_baud = baud;
+  }
+  if (width != STET) {
+    current_width = width;
+  }
+  if (parity != STET) {
+    current_parity = parity;
+  }   
+  if (stopbits != STET) {
+    current_stopbits = stopbits;
+  }
+
+  // Send the command and get a response
+  set_params(current_baud, current_width | current_parity | current_stopbits);
+
+  // translate parameters for the local UART
+  uint uart_baud = (uint)(current_baud + 0.5);    // Note we're mangling any fractional part
+  uint uart_data_bits = (current_width >> 8) + 4;         // valid for 5 through 8
+  uint uart_stop_bits = (current_stopbits == SSS_SERIAL_STOP_BIT_1) ? 1 : 2; // no support for 1.5
+  uart_parity_t uart_parity = UART_PARITY_NONE;
+  switch (current_parity) {
+    case SSS_SERIAL_PARITY_NONE: uart_parity = UART_PARITY_NONE; break;
+    case SSS_SERIAL_PARITY_EVEN: uart_parity = UART_PARITY_EVEN; break;
+    case SSS_SERIAL_PARITY_ODD: uart_parity = UART_PARITY_ODD; break;
+    default: break;     // No support for MARK or SPACE parity
+  }
+
+  // Switch over the local UART
+  uart_set_baudrate(UART_ID, (uint)current_baud);
+  uart_set_format(UART_ID, uart_data_bits, uart_stop_bits, uart_parity);
+}
+
 
 int main()
 {
@@ -516,12 +595,13 @@ int main()
   // !!! Figure out why and do something more elegant.
   uart_puts(UART_ID, "Hello UART number one!\r\n");
   uart_tx_wait_blocking(UART_ID);
-  sleep_ms(100);
 
   // Begin test procedures
   get_a_nop_response();   // establish communication with UUT
   puts("UUT NOP heard");
 
+  //set_params(9600.0, 0x0413); // stay at 8N1 for now
+  change_params(STET, STET, STET, STET);  // don't really change for now
 
   send_nop_with_junk();   // emit some stuff to test frame escaping
   // send_nop_with_bad_crc();// emit some stuff to test CRC checking
@@ -535,7 +615,7 @@ int main()
   for (int i=0; i < 5; i++) {
     for (int j=0; j < 1000; j++) {
       get_a_nop_response();
-  }
+    }
     printf("%ld thousand NOP transactions so far\n", ++iteration);
   }
 */
