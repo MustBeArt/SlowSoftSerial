@@ -510,7 +510,7 @@ int main()
   gpio_set_dir(LED_PIN, GPIO_OUT);
 
   sleep_ms(3000);     // Wait for serial terminal to be ready
-  puts("Hello, this is the Slow Soft Serial tester");
+  puts("Hello, this is the Slow Soft Serial test controller");
 
   uart_puts(UART_ID, "Hello UART number one!\r\n");
   uart_tx_wait_blocking(UART_ID);
