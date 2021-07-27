@@ -512,6 +512,8 @@ int main()
   sleep_ms(3000);     // Wait for serial terminal to be ready
   puts("Hello, this is the Slow Soft Serial test controller");
 
+  // Transmitting some stuff here seems to unstick the UART.
+  // !!! Figure out why and do something more elegant.
   uart_puts(UART_ID, "Hello UART number one!\r\n");
   uart_tx_wait_blocking(UART_ID);
   sleep_ms(100);
