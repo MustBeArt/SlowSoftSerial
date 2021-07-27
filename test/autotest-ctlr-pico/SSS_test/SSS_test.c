@@ -397,6 +397,51 @@ void get_a_nop_response(void)
           && (buffer[1] == CMD_NOP)
           && check_packet_crc(buffer, response_len)) {
         return;
+      }
+    }
+  }
+}
+
+void send_nop_with_junk(void)
+{
+  unsigned char nop_cmd[12 + CHARACTERS_IN_CRC] = { DIR_CMD, CMD_NOP, 'a', 0x10, 'b', 0x1b, 'c', 0x1c, 'd', 0x1d, 'e', 0x1e };
+  int len = add_packet_crc(nop_cmd, 12);
+  int response_len;
+  int max_tries = 3;    // try receiving response several times
+
+  while (1) {
+    put_frame_with_LED(nop_cmd, len);
+
+    for (int i=0; i < max_tries; i++) {
+      response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
+      if ((response_len >= (2 + CHARACTERS_IN_CRC))
+          && (buffer[0] == DIR_RSP)
+          && (buffer[1] == CMD_NOP)
+          && check_packet_crc(buffer, response_len)) {
+        return;
+      }
+    }
+  }
+}
+
+void send_nop_with_bad_crc(void)
+{
+  unsigned char nop_cmd[12 + CHARACTERS_IN_CRC] = { DIR_CMD, CMD_NOP, 'a', 0x10, 'b', 0x1b, 'c', 0x1c, 'd', 0x1d, 'e', 0x1e };
+  int len = add_packet_crc(nop_cmd, 12);
+  int response_len;
+  int max_tries = 3;    // try receiving response several times
+
+  nop_cmd[len-1] ^= 1;   // insert bit error
+
+  while (1) {
+    put_frame_with_LED(nop_cmd, len);
+
+    for (int i=0; i < max_tries; i++) {
+      response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
+      if ((response_len >= (2 + CHARACTERS_IN_CRC))
+          && (buffer[0] == DIR_RSP)
+          && (buffer[1] == CMD_NOP)
+          && check_packet_crc(buffer, response_len)) {
         return;
       }
     }
@@ -473,22 +518,25 @@ int main()
 
   // Begin test procedures
   get_a_nop_response();   // establish communication with UUT
+  puts("UUT NOP heard");
+
+
+  send_nop_with_junk();   // emit some stuff to test frame escaping
+  // send_nop_with_bad_crc();// emit some stuff to test CRC checking
 
   obtain_uut_info();      // ask the UUT for its identity and display
 
 
-
+/*
   // dummy testing
   iteration = 0;
   for (int i=0; i < 5; i++) {
-
-    memcpy(buffer, test_frame, test_frame_length);
-    put_frame_with_LED(buffer, add_packet_crc(buffer, test_frame_length));
-    printf("%ld Sent test frame with crc\n", iteration++);
-
-    sleep_ms(500);
+    for (int j=0; j < 1000; j++) {
+      get_a_nop_response();
   }
-
+    printf("%ld thousand NOP transactions so far\n", ++iteration);
+  }
+*/
 
   puts("Test completed.");
 
