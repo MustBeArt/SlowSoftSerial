@@ -75,6 +75,39 @@ unsigned char tx_buf[TX_BUF_LEN];
 volatile int tx_head, tx_tail;
 
 
+// I believe the SDK's handling of UART receive interrupts is wrong for the FIFO enabled
+// case. They enable the receive interrupt (which fires when the FIFO reaches a level)
+// but they don't enable the timeout interrupt (which fires when the FIFO is non-empty
+// but below the trigger level for some duration of time). Thus, the last few characters
+// do not get received. This is a patched version of their interrupt enabler that takes
+// care of that, or so I hope.
+/*! \brief Setup UART interrupts
+ *  \ingroup hardware_uart
+ *
+ * Enable the UART's interrupt output. An interrupt handler will need to be installed prior to calling
+ * this function.
+ *
+ * \param uart UART instance. \ref uart0 or \ref uart1
+ * \param rx_has_data If true an interrupt will be fired when the RX FIFO contain data.
+ * \param tx_needs_data If true an interrupt will be fired when the TX FIFO needs data.
+ */
+static inline void my_uart_set_irq_enables(uart_inst_t *uart, bool rx_has_data, bool tx_needs_data) {
+    uart_get_hw(uart)->imsc = (!!tx_needs_data << UART_UARTIMSC_TXIM_LSB) |
+                              (!!rx_has_data << UART_UARTIMSC_RXIM_LSB) |
+                              (!!rx_has_data << UART_UARTIMSC_RTIM_LSB);  // PTW there it is
+    if (rx_has_data) {
+        // Set minimum threshold
+        hw_write_masked(&uart_get_hw(uart)->ifls, 0 << UART_UARTIFLS_RXIFLSEL_LSB,
+                        UART_UARTIFLS_RXIFLSEL_BITS);
+    }
+    if (tx_needs_data) {
+        // Set maximum threshold
+        hw_write_masked(&uart_get_hw(uart)->ifls, 0 << UART_UARTIFLS_TXIFLSEL_LSB,
+                        UART_UARTIFLS_TXIFLSEL_BITS);
+    }
+}
+
+
 // UART Receive and Transmit Interrupt Handler
 // This handler just adds some buffering to allow for interrupt latency.
 // It doesn't do any processing.
@@ -101,7 +134,7 @@ void on_uart_irq(void)
       uart_putc_raw(UART_ID, tx_buf[tx_tail]);
       tx_tail = (tx_tail+1) % TX_BUF_LEN;
     } else {                                        // transmit buffer is empty now
-      uart_set_irq_enables(UART_ID, true, false);   // disable TX interrupts
+      my_uart_set_irq_enables(UART_ID, true, false);   // disable TX interrupts
       break;
     }
   }
@@ -118,7 +151,7 @@ void serial_putc(unsigned char c) {
   tx_buf[tx_head] = c;
   tx_head = (tx_head+1) % TX_BUF_LEN;
 
-  uart_set_irq_enables(UART_ID, true, true);  // make sure TX interrupts are enabled
+  my_uart_set_irq_enables(UART_ID, true, true);  // make sure TX interrupts are enabled
 }
 
 
@@ -417,10 +450,10 @@ int main()
   uart_init(UART_ID, INITIAL_BAUD_RATE);
   uart_set_hw_flow(UART_ID, false, false);
   uart_set_format(UART_ID, INITIAL_WORD_WIDTH, INITIAL_STOP_BITS, INITIAL_PARITY);
-  uart_set_fifo_enabled(UART_ID, false);   // it'd be nice if this had documentation
+  uart_set_fifo_enabled(UART_ID, true);   // it'd be nice if this had documentation
   irq_set_exclusive_handler(UART_IRQ, on_uart_irq);
   irq_set_enabled(UART_IRQ, true);
-  uart_set_irq_enables(UART_ID, true, false); // IRQ for receive
+  my_uart_set_irq_enables(UART_ID, true, false); // IRQ for receive
             // we will enable the transmit IRQ when we've buffered something to transmit
   rx_head = rx_tail = 0;
   tx_head = tx_tail = 0;
