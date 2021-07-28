@@ -17,6 +17,8 @@
 
 #include "SlowSoftSerial.h"
 
+#define BUILTIN_LED 13
+
 // Do you want noisy packet trace output?
 #define PACKET_TRACE
 
@@ -224,6 +226,8 @@ void put_frame(unsigned char *buf, int len)
 {
   int  i;
 
+  digitalWrite(BUILTIN_LED, 1); // LED on for transmitting
+
   sss.write(FEND);        /*  all frames begin with FEND */
 
   for (i=0; i<len; i++)
@@ -246,6 +250,9 @@ void put_frame(unsigned char *buf, int len)
 
   sss.write(FEND);       /*  all frames end with FEND */
 
+  sss.flush();                    // Wait for transmission to complete
+  digitalWrite(BUILTIN_LED, 0);   // turn off LED
+  
 #ifdef PACKET_TRACE
   dump_buf(buf, len, 1);
 #endif
@@ -359,6 +366,9 @@ void change_serial_params(double baud, uint16_t config) {
 void setup() {
   Serial.begin(9600);
   sss.begin(9600, SSS_SERIAL_8N1);
+
+  pinMode(BUILTIN_LED, OUTPUT);   // LED to flash on transmit
+  digitalWrite(BUILTIN_LED, 0);
 
   while (!Serial);
 
