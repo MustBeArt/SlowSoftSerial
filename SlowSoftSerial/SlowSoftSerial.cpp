@@ -59,9 +59,11 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
     if (baudrate < _SSS_MIN_BAUDRATE) {
         return;
     }
-    _baud_microseconds = 1000000.0/baudrate;
-    _rx_microseconds = 250000.0/baudrate;       // 4x the baud rate
-    
+    _tx_microseconds = 1000000.0/baudrate;  // 1x baud rate; will be halved in 1.5 stop bit case
+    _rx_microseconds = 250000.0/baudrate;   // 4x baud rate
+
+    _tx_halfbaud = 0;   // flag; will be set in 1.5 stop bit cases
+
     switch (config) {
         case SSS_SERIAL_5N1:
             _num_bits_to_send = 6;
@@ -70,7 +72,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_NONE;
             _databits_mask = 0x1F;
             _rx_shiftin_bit = 0x10;
-            _fill_op_table(5,1);
+            _fill_op_table(5,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_6N1:
@@ -80,7 +82,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_NONE;
             _databits_mask = 0x3F;
             _rx_shiftin_bit = 0x20;
-            _fill_op_table(6,1);
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_7N1:
@@ -90,7 +92,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_NONE;
             _databits_mask = 0x7F;
             _rx_shiftin_bit = 0x40;
-            _fill_op_table(7,1);
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_8N1:
@@ -100,7 +102,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_NONE;
             _databits_mask = 0xFF;
             _rx_shiftin_bit = 0x80;
-            _fill_op_table(8,1);
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_5N2:
@@ -110,7 +112,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_NONE;
             _databits_mask = 0x1F;
             _rx_shiftin_bit = 0x10;
-            _fill_op_table(5,2);
+            _fill_op_table(5,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_6N2:
@@ -120,7 +122,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_NONE;
             _databits_mask = 0x3F;
             _rx_shiftin_bit = 0x20;
-            _fill_op_table(6,2);
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_7N2:
@@ -130,7 +132,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_NONE;
             _databits_mask = 0x7F;
             _rx_shiftin_bit = 0x40;
-            _fill_op_table(7,2);
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_8N2:
@@ -140,7 +142,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_NONE;
             _databits_mask = 0xFF;
             _rx_shiftin_bit = 0x80;
-            _fill_op_table(8,2);
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_5E1:
@@ -150,7 +152,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_EVEN;
             _databits_mask = 0x1F;
             _rx_shiftin_bit = 0x20;
-            _fill_op_table(6,1);
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_6E1:
@@ -160,7 +162,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_EVEN;
             _databits_mask = 0x3F;
             _rx_shiftin_bit = 0x40;
-            _fill_op_table(7,1);
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_7E1:
@@ -170,7 +172,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_EVEN;
             _databits_mask = 0x7F;
             _rx_shiftin_bit = 0x80;
-            _fill_op_table(8,1);
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_8E1:
@@ -180,7 +182,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_EVEN;
             _databits_mask = 0xFF;
             _rx_shiftin_bit = 0x100;
-            _fill_op_table(9,1);
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_5E2:
@@ -190,7 +192,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_EVEN;
             _databits_mask = 0x1F;
             _rx_shiftin_bit = 0x20;
-            _fill_op_table(6,2);
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_6E2:
@@ -200,7 +202,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_EVEN;
             _databits_mask = 0x3F;
             _rx_shiftin_bit = 0x40;
-            _fill_op_table(7,2);
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_7E2:
@@ -210,7 +212,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_EVEN;
             _databits_mask = 0x7F;
             _rx_shiftin_bit = 0x80;
-            _fill_op_table(8,2);
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_8E2:
@@ -220,7 +222,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_EVEN;
             _databits_mask = 0xFF;
             _rx_shiftin_bit = 0x100;
-            _fill_op_table(9,2);
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_5O1:
@@ -230,7 +232,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_ODD;
             _databits_mask = 0x1F;
             _rx_shiftin_bit = 0x20;
-            _fill_op_table(6,1);
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_1);
            break;
 
         case SSS_SERIAL_6O1:
@@ -240,7 +242,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_ODD;
             _databits_mask = 0x3F;
             _rx_shiftin_bit = 0x40;
-            _fill_op_table(7,1);
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_7O1:
@@ -250,7 +252,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_ODD;
             _databits_mask = 0x7F;
             _rx_shiftin_bit = 0x80;
-            _fill_op_table(8,1);
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_8O1:
@@ -260,7 +262,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_ODD;
             _databits_mask = 0xFF;
             _rx_shiftin_bit = 0x100;
-            _fill_op_table(9,1);
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_5O2:
@@ -270,7 +272,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_ODD;
             _databits_mask = 0x1F;
             _rx_shiftin_bit = 0x20;
-            _fill_op_table(6,2);
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_6O2:
@@ -280,7 +282,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_ODD;
             _databits_mask = 0x3F;
             _rx_shiftin_bit = 0x40;
-            _fill_op_table(7,2);
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_7O2:
@@ -290,7 +292,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_ODD;
             _databits_mask = 0x7F;
             _rx_shiftin_bit = 0x80;
-            _fill_op_table(8,2);
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_8O2:
@@ -300,7 +302,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_ODD;
             _databits_mask = 0xFF;
             _rx_shiftin_bit = 0x100;
-            _fill_op_table(9,2);
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_2);
            break;
 
         case SSS_SERIAL_5M1:
@@ -310,7 +312,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_MARK;
             _databits_mask = 0x1F;
             _rx_shiftin_bit = 0x20;
-            _fill_op_table(6,1);
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_1);
            break;
 
         case SSS_SERIAL_6M1:
@@ -320,7 +322,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_MARK;
             _databits_mask = 0x3F;
             _rx_shiftin_bit = 0x40;
-            _fill_op_table(7,1);
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_7M1:
@@ -330,7 +332,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_MARK;
             _databits_mask = 0x7F;
             _rx_shiftin_bit = 0x80;
-            _fill_op_table(8,1);
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_8M1:
@@ -340,7 +342,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_MARK;
             _databits_mask = 0xFF;
             _rx_shiftin_bit = 0x100;
-            _fill_op_table(9,1);
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_5M2:
@@ -350,7 +352,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_MARK;
             _databits_mask = 0x1F;
             _rx_shiftin_bit = 0x20;
-            _fill_op_table(6,2);
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_6M2:
@@ -360,7 +362,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_MARK;
             _databits_mask = 0x3F;
             _rx_shiftin_bit = 0x40;
-            _fill_op_table(7,2);
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_7M2:
@@ -370,7 +372,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_MARK;
             _databits_mask = 0x7F;
             _rx_shiftin_bit = 0x80;
-            _fill_op_table(8,2);
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_8M2:
@@ -380,7 +382,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_MARK;
             _databits_mask = 0xFF;
             _rx_shiftin_bit = 0x100;
-            _fill_op_table(9,2);
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_2);
            break;
 
         case SSS_SERIAL_5S1:
@@ -390,7 +392,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_SPACE;
             _databits_mask = 0x1F;
             _rx_shiftin_bit = 0x20;
-            _fill_op_table(6,1);
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_1);
            break;
 
         case SSS_SERIAL_6S1:
@@ -400,7 +402,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_SPACE;
             _databits_mask = 0x3F;
             _rx_shiftin_bit = 0x40;
-            _fill_op_table(7,1);
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_7S1:
@@ -410,7 +412,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_SPACE;
             _databits_mask = 0x7F;
             _rx_shiftin_bit = 0x80;
-            _fill_op_table(8,1);
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_8S1:
@@ -420,7 +422,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_SPACE;
             _databits_mask = 0xFF;
             _rx_shiftin_bit = 0x100;
-            _fill_op_table(9,1);
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_1);
             break;
 
         case SSS_SERIAL_5S2:
@@ -430,7 +432,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_SPACE;
             _databits_mask = 0x1F;
             _rx_shiftin_bit = 0x20;
-            _fill_op_table(6,2);
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_6S2:
@@ -440,7 +442,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_SPACE;
             _databits_mask = 0x3F;
             _rx_shiftin_bit = 0x40;
-            _fill_op_table(7,2);
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_7S2:
@@ -450,7 +452,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_SPACE;
             _databits_mask = 0x7F;
             _rx_shiftin_bit = 0x80;
-            _fill_op_table(8,2);
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_2);
             break;
 
         case SSS_SERIAL_8S2:
@@ -460,7 +462,247 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _parity = SSS_SERIAL_PARITY_SPACE;
             _databits_mask = 0xFF;
             _rx_shiftin_bit = 0x100;
-            _fill_op_table(9,2);
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_2);
+            break;
+
+        case SSS_SERIAL_5N15:
+            _num_bits_to_send = 6;
+            _stop_bits = 0x60;
+            _parity_bit = 0;
+            _parity = SSS_SERIAL_PARITY_NONE;
+            _databits_mask = 0x1F;
+            _rx_shiftin_bit = 0x10;
+            _fill_op_table(5,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_6N15:
+            _num_bits_to_send = 7;
+            _stop_bits = 0xC0;
+            _parity_bit = 0;
+            _parity = SSS_SERIAL_PARITY_NONE;
+            _databits_mask = 0x3F;
+            _rx_shiftin_bit = 0x20;
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_7N15:
+            _num_bits_to_send = 8;
+            _stop_bits = 0x180;
+            _parity_bit = 0;
+            _parity = SSS_SERIAL_PARITY_NONE;
+            _databits_mask = 0x7F;
+            _rx_shiftin_bit = 0x40;
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_8N15:
+            _num_bits_to_send = 9;
+            _stop_bits = 0x300;
+            _parity_bit = 0;
+            _parity = SSS_SERIAL_PARITY_NONE;
+            _databits_mask = 0xFF;
+            _rx_shiftin_bit = 0x80;
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_5E15:
+            _num_bits_to_send = 7;
+            _stop_bits = 0xC0;
+            _parity_bit = 0x20;
+            _parity = SSS_SERIAL_PARITY_EVEN;
+            _databits_mask = 0x1F;
+            _rx_shiftin_bit = 0x20;
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_6E15:
+            _num_bits_to_send = 8;
+            _stop_bits = 0x180;
+            _parity_bit = 0x40;
+            _parity = SSS_SERIAL_PARITY_EVEN;
+            _databits_mask = 0x3F;
+            _rx_shiftin_bit = 0x40;
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_7E15:
+            _num_bits_to_send = 9;
+            _stop_bits = 0x300;
+            _parity_bit = 0x80;
+            _parity = SSS_SERIAL_PARITY_EVEN;
+            _databits_mask = 0x7F;
+            _rx_shiftin_bit = 0x80;
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_8E15:
+            _num_bits_to_send = 10;
+            _stop_bits = 0x600;
+            _parity_bit = 0x100;
+            _parity = SSS_SERIAL_PARITY_EVEN;
+            _databits_mask = 0xFF;
+            _rx_shiftin_bit = 0x100;
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_5O15:
+            _num_bits_to_send = 7;
+            _stop_bits = 0xC0;
+            _parity_bit = 0x20;
+            _parity = SSS_SERIAL_PARITY_ODD;
+            _databits_mask = 0x1F;
+            _rx_shiftin_bit = 0x20;
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_6O15:
+            _num_bits_to_send = 8;
+            _stop_bits = 0x180;
+            _parity_bit = 0x40;
+            _parity = SSS_SERIAL_PARITY_ODD;
+            _databits_mask = 0x3F;
+            _rx_shiftin_bit = 0x40;
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_7O15:
+            _num_bits_to_send = 9;
+            _stop_bits = 0x300;
+            _parity_bit = 0x80;
+            _parity = SSS_SERIAL_PARITY_ODD;
+            _databits_mask = 0x7F;
+            _rx_shiftin_bit = 0x80;
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_8O15:
+            _num_bits_to_send = 10;
+            _stop_bits = 0x600;
+            _parity_bit = 0x100;
+            _parity = SSS_SERIAL_PARITY_ODD;
+            _databits_mask = 0xFF;
+            _rx_shiftin_bit = 0x100;
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_5M15:
+            _num_bits_to_send = 7;
+            _stop_bits = 0xC0;
+            _parity_bit = 0x20;
+            _parity = SSS_SERIAL_PARITY_MARK;
+            _databits_mask = 0x1F;
+            _rx_shiftin_bit = 0x20;
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_6M15:
+            _num_bits_to_send = 8;
+            _stop_bits = 0x180;
+            _parity_bit = 0x40;
+            _parity = SSS_SERIAL_PARITY_MARK;
+            _databits_mask = 0x3F;
+            _rx_shiftin_bit = 0x40;
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_7M15:
+            _num_bits_to_send = 9;
+            _stop_bits = 0x300;
+            _parity_bit = 0x80;
+            _parity = SSS_SERIAL_PARITY_MARK;
+            _databits_mask = 0x7F;
+            _rx_shiftin_bit = 0x80;
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_8M15:
+            _num_bits_to_send = 10;
+            _stop_bits = 0x600;
+            _parity_bit = 0x100;
+            _parity = SSS_SERIAL_PARITY_MARK;
+            _databits_mask = 0xFF;
+            _rx_shiftin_bit = 0x100;
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_5S15:
+            _num_bits_to_send = 7;
+            _stop_bits = 0xC0;
+            _parity_bit = 0x20;
+            _parity = SSS_SERIAL_PARITY_SPACE;
+            _databits_mask = 0x1F;
+            _rx_shiftin_bit = 0x20;
+            _fill_op_table(6,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_6S15:
+            _num_bits_to_send = 8;
+            _stop_bits = 0x180;
+            _parity_bit = 0x40;
+            _parity = SSS_SERIAL_PARITY_SPACE;
+            _databits_mask = 0x3F;
+            _rx_shiftin_bit = 0x40;
+            _fill_op_table(7,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_7S15:
+            _num_bits_to_send = 9;
+            _stop_bits = 0x300;
+            _parity_bit = 0x80;
+            _parity = SSS_SERIAL_PARITY_SPACE;
+            _databits_mask = 0x7F;
+            _rx_shiftin_bit = 0x80;
+            _fill_op_table(8,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
+            break;
+
+        case SSS_SERIAL_8S15:
+            _num_bits_to_send = 10;
+            _stop_bits = 0x600;
+            _parity_bit = 0x100;
+            _parity = SSS_SERIAL_PARITY_SPACE;
+            _databits_mask = 0xFF;
+            _rx_shiftin_bit = 0x100;
+            _fill_op_table(9,SSS_SERIAL_STOP_BIT_1_5);
+            _tx_halfbaud = 1;
+            _baud_microseconds = _baud_microseconds/2.0;
            break;
 
         default:
@@ -610,6 +852,7 @@ size_t SlowSoftSerial::write(uint8_t chr) {
     if (!_tx_running) {
         if (_tx_timer.begin(_tx_trampoline, _baud_microseconds)) {
             _tx_running = true;
+            _tx_baud_divider = _tx_halfbaud;    // only waste half a baud in 1.5 stop bits case
         }
     }
 
@@ -667,10 +910,35 @@ uint16_t SlowSoftSerial::_add_parity(uint8_t chr) {
 }
 
 
+// Handle the hardware transmit interrupt for 1.5-stop-bits case.
+//
+// In the common cases, the transmit interrupt comes once per baud.
+// In order to handle accurate timing for the case of 1.5 stop bits,
+// we run the transmit interrupt at double the baud rate.
+//
+// All processing is exactly the same except that an extra half baud
+// is inserted at the end of the stop bit. So, this function passes
+// interrupts through to the normal _tx_baud_handler() function.
+// After processing 1 stop bit in the 1.5 stop bit case,
+// _tx_baud_handler() sets the tx_baud_divider flag, which causes
+// the following passed-through interrupt(s) to be advanced by half a baud.
+void SlowSoftSerial::_tx_halfbaud_handler(void) {
+    if (_tx_baud_divider) {
+        _tx_baud_divider = 0;   // order is important here!
+        _tx_baud_handler();     // because this may overwrite _tx_baud_divider
+    } else {
+        _tx_baud_divider = 1;
+    }
+}
+
 // Handle the transmit interrupt
-// Interrupt occurs once per baud while we're actively transmitting
+// Interrupt occurs periodically while we're actively transmitting
 // or waiting for handshaking to allow transmitting.
-void SlowSoftSerial::_tx_handler(void) {
+// For most cases we only need the interrupts that occur at an
+// integer number of bauds from the beginning of the start bit.
+// For cases with 1.5 stop bits, though, we need to take one final
+// interrupt that's halfway between those integer bauds.
+void SlowSoftSerial::_tx_baud_handler(void) {
     uint16_t data_as_sent;
 
     if (_tx_bit_count > 0) {
@@ -678,6 +946,13 @@ void SlowSoftSerial::_tx_handler(void) {
         digitalWriteFast(_txPin, _tx_data_word & 0x01);
         _tx_data_word >>= 1;
         _tx_bit_count--;
+        return;
+    }
+
+    if (_tx_extra_half_stop) {
+        // We've sent the first 1 stop bit, now send a half-baud more
+        _tx_extra_half_stop = 0;
+        _tx_divider = 1;    // this jumps timing by half a baud
         return;
     }
 
@@ -704,11 +979,16 @@ void SlowSoftSerial::_tx_handler(void) {
     digitalWriteFast(_txPin, _SSS_START_LEVEL);
     _tx_data_word = data_as_sent;
     _tx_bit_count = _num_bits_to_send;
+    _tx_extra_half_stop = _tx_halfbaud;
 }
 
 
 void _tx_trampoline(void) {
-    instance_p->_tx_handler();
+    if (_tx_halfbaud) {
+        instance_p->_tx_halfbaud_handler();
+    } else {
+        instance_p->_tx_baud_handler();
+    }
 }
 
 
@@ -736,7 +1016,10 @@ void SlowSoftSerial::_fill_op_table(int rxbits, int stopbits) {
     }
     _rx_op_table[i++] = _SSS_OP_STOP;
     _rx_op_table[i++] = _SSS_OP_STOP;
-    if (stopbits == 2) {
+    if (stopbits == SSS_SERIAL_STOP_BIT_1_5) {
+        _rx_op_table[i++] = _SSS_OP_STOP;
+        _rx_op_table[i++] = _SSS_OP_STOP;
+    } else if (stopbits == SSS_SERIAL_STOP_BIT_2) {
         _rx_op_table[i++] = _SSS_OP_STOP;
         _rx_op_table[i++] = _SSS_OP_STOP;
         _rx_op_table[i++] = _SSS_OP_STOP;
@@ -776,7 +1059,7 @@ void SlowSoftSerial::_rx_timer_handler(void) {
         case _SSS_OP_START:
             // We are somewhere in the middle of the start bit.
             // Just make sure it's still a valid start bit.
-            if (digitalRead(_rxPin) != (_inverse ? HIGH : LOW)) {
+            if (digitalRead(_rxPin) != _SSS_START_LEVEL) {
                 // stop the timer and go back to waiting for a start bit.
                 // must have been noise, or baud rate error, or something.
                 _rx_timer.end();
@@ -823,7 +1106,7 @@ void SlowSoftSerial::_rx_timer_handler(void) {
         case _SSS_OP_STOP:
             // We are somewhere in the middle of the stop bit.
             // Just make sure it's a valid stop bit.
-            if (digitalRead(_rxPin) != (_inverse ? LOW : HIGH)) {
+            if (digitalRead(_rxPin) != _SSS_STOP_LEVEL) {
                 // stop the timer and go back to waiting for a start bit.
                 // must have been noise, or baud rate error, or something.
                 _rx_timer.end();
@@ -839,7 +1122,7 @@ void SlowSoftSerial::_rx_timer_handler(void) {
             // We'll check one last time that the stop bit is valid, and then we'll
             // wrap up processing for this received character. Either way, we'll set up
             // for receiving the next character.
-            if (digitalRead(_rxPin) == (_inverse ? LOW : HIGH)) {
+            if (digitalRead(_rxPin) == _SSS_STOP_LEVEL) {
                 // stop bit passed the last check, no timing errors on this character!
                 // We store the data and parity bits. If there's to be any parity checking,
                 // it must occur as the characters are read out of the buffer (and not in
