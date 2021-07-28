@@ -553,6 +553,9 @@ void change_params(double baud, int width, int parity, int stopbits) {
   // Switch over the local UART
   uart_set_baudrate(UART_ID, (uint)current_baud);
   uart_set_format(UART_ID, uart_data_bits, uart_stop_bits, uart_parity);
+
+  // Wait for UUT to execute the change
+  sleep_ms(1);
 }
 
 
@@ -603,17 +606,11 @@ int main()
 
   obtain_uut_info();      // ask the UUT for its identity and display
 
-
-/*
-  // dummy testing
-  iteration = 0;
-  for (int i=0; i < 5; i++) {
-    for (int j=0; j < 1000; j++) {
-      get_a_nop_response();
-    }
-    printf("%ld thousand NOP transactions so far\n", ++iteration);
-  }
-*/
+  change_params(1200, STET, STET, STET);  // try a real baud rate change
+  send_nop_with_junk();
+  obtain_uut_info();
+  change_params(9600, STET, STET, STET);
+  send_nop_with_junk();
 
   puts("Test completed.");
 
