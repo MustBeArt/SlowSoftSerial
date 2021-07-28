@@ -413,6 +413,10 @@ void get_a_nop_response(void)
   }
 }
 
+
+// Send a NOP command with some extra bytes in the payload.
+// This is permitted by the spec. The UUT is supposed to ignore them
+// and not include them in the response.
 void send_nop_with_junk(void)
 {
   unsigned char nop_cmd[12 + CHARACTERS_IN_CRC] = { DIR_CMD, CMD_NOP, 'a', 0x10, 'b', 0x1b, 'c', 0x1c, 'd', 0x1d, 'e', 0x1e };
@@ -435,6 +439,8 @@ void send_nop_with_junk(void)
   }
 }
 
+
+// Send a NOP command with a bad CRC, to demonstrate CRC checking.
 void send_nop_with_bad_crc(void)
 {
   unsigned char nop_cmd[12 + CHARACTERS_IN_CRC] = { DIR_CMD, CMD_NOP, 'a', 0x10, 'b', 0x1b, 'c', 0x1c, 'd', 0x1d, 'e', 0x1e };
@@ -443,20 +449,9 @@ void send_nop_with_bad_crc(void)
   int max_tries = 3;    // try receiving response several times
 
   nop_cmd[len-1] ^= 1;   // insert bit error
-
-  while (1) {
-    put_frame_with_LED(nop_cmd, len);
-
-    for (int i=0; i < max_tries; i++) {
-      response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
-      if ((response_len >= (2 + CHARACTERS_IN_CRC))
-          && (buffer[0] == DIR_RSP)
-          && (buffer[1] == CMD_NOP)
-          && check_packet_crc(buffer, response_len)) {
-        return;
-      }
-    }
-  }
+  put_frame_with_LED(nop_cmd, len);
+  // We do not expect a response to a packet with a bad CRC.
+  sleep_ms(30);     // leave a gap in the timeline for readability
 }
 
 
@@ -604,7 +599,7 @@ int main()
   change_params(STET, STET, STET, STET);  // don't really change for now
 
   send_nop_with_junk();   // emit some stuff to test frame escaping
-  // send_nop_with_bad_crc();// emit some stuff to test CRC checking
+  send_nop_with_bad_crc();// emit some stuff to test CRC checking
 
   obtain_uut_info();      // ask the UUT for its identity and display
 
