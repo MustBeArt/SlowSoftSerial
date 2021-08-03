@@ -155,7 +155,7 @@ void on_uart_irq(void)
 // Blocking UART transmit through the interrupt-driven buffer
 void serial_putc(unsigned char c) {
   // wait for there to be some room in the buffer
-  while (tx_tail == (tx_head+1) & TX_BUF_LEN) {
+  while (tx_tail == (tx_head+1) % TX_BUF_LEN) {
     tight_loop_contents();
   }
 
