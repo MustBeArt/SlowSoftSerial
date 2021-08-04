@@ -43,6 +43,7 @@ int current_stopbits = SSS_SERIAL_STOP_BIT_1;
 
 unsigned char width_masks[] = { 0x00, 0x1F, 0x3F, 0x7F, 0xFF };
 #define CURRENT_WIDTH_MASK (width_masks[current_width >> 8])  // convert current_width to a mask
+#define CURRENT_WIDTH_BITS ((current_width >> 8) + 4)         // convert current_width to # of bits
 
 // In serial configuration changes, 0 means leave that parameter alone
 #define STET 0
@@ -62,8 +63,6 @@ unsigned char width_masks[] = { 0x00, 0x1F, 0x3F, 0x7F, 0xFF };
 #define CMD_BABBLE 3
 #define CMD_PARAMS 4
 #define CMD_EXT    0x1f
-
-#define STANDARD_TIMEOUT  20000 // milliseconds
 
 #define MAX_DATA_LEN  10000
 #define	BUFLEN (MAX_DATA_LEN*2+10)  // big enough for all bytes to be transposed
@@ -193,14 +192,19 @@ bool serial_getc_timeout(absolute_time_t tmax, unsigned char *chr_p) {
 
 
 // Get one complete frame of data from the serial port, and place it in buf,
-// if the complete frame arrives within the timeout period in milliseconds.
+// if the complete frame arrives within a reasonable time based on the current
+// communications parameters and the expected response size. Expected size
+// includes only the data characters and not the header, framing, stuffing,
+// or CRC.
+//
 // Returns the number of bytes placed in buf, or 0 if the frame was
 // ill-formed or if a complete frame was not received.
-int get_frame_with_timeout(unsigned char *buf, uint32_t timeout)
+int get_frame_with_expected_data_size(unsigned char *buf, int expected_size_in_characters)\
 {
   unsigned char	*bufp;
   unsigned char	chr;
   int	count = 0;
+  uint32_t timeout = 10 + ((long)expected_size_in_characters*2 + 10) * (CURRENT_WIDTH_BITS + 4) * 1000 / current_baud;
   absolute_time_t timeout_time = make_timeout_time_ms(timeout);
 
   newframe:
@@ -232,7 +236,7 @@ int get_frame_with_timeout(unsigned char *buf, uint32_t timeout)
     }
 
     if ( ! serial_getc_timeout(timeout_time, &chr)) { // Get next character
-      puts("Frame timeout");
+      printf("Frame timeout %ldms\n", timeout);
       return 0;       // timeout before a full frame arrives
     }
   }
@@ -407,7 +411,7 @@ void get_a_nop_response(void)
     put_frame_with_LED(nop_cmd, len);
 
     for (int i=0; i < max_tries; i++) {
-      response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
+      response_len = get_frame_with_expected_data_size(buffer, 0);
       if ((response_len >= (2 + CHARACTERS_IN_CRC))
           && (buffer[0] == DIR_RSP)
           && (buffer[1] == CMD_NOP)
@@ -433,7 +437,7 @@ void send_nop_with_junk(void)
     put_frame_with_LED(nop_cmd, len);
 
     for (int i=0; i < max_tries; i++) {
-      response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
+      response_len = get_frame_with_expected_data_size(buffer, 0);
       if ((response_len >= (2 + CHARACTERS_IN_CRC))
           && (buffer[0] == DIR_RSP)
           && (buffer[1] == CMD_NOP)
@@ -476,7 +480,7 @@ void obtain_uut_info(void) {
     put_frame_with_LED(id_cmd, len);
 
     for (int i=0; i < max_tries; i++) {
-      response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
+      response_len = get_frame_with_expected_data_size(buffer, 256);
       if ((response_len >= (2 + CHARACTERS_IN_CRC))
           && (buffer[0] == DIR_RSP)
           && (buffer[1] == CMD_ID)
@@ -506,7 +510,7 @@ void set_params(double baud, uint16_t config) {
     put_frame_with_LED(params_cmd, 26);
 
     for (int i=0; i < max_tries; i++) {
-      response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
+      response_len = get_frame_with_expected_data_size(buffer, 16);
       if ((response_len == 26)
           && (buffer[0] == DIR_RSP)
           && (memcmp(buffer+1, params_cmd+1, 17) == 0)
@@ -527,21 +531,18 @@ void set_params(double baud, uint16_t config) {
 // which implies the non-zero ones can be ORed together to make a config code.
 void change_params(double baud, int width, int parity, int stopbits) {
 
-  if (baud != STET) {
-    current_baud = baud;
-  }
-  if (width != STET) {
-    current_width = width;
-  }
-  if (parity != STET) {
-    current_parity = parity;
-  }   
-  if (stopbits != STET) {
-    current_stopbits = stopbits;
-  }
+  double new_baud = (baud == STET) ? current_baud : baud;
+  int new_width = (width == STET) ? current_width : width;
+  int new_parity = (parity == STET) ? current_parity : parity;
+  int new_stopbits = (stopbits == STET) ? current_stopbits : stopbits;
 
   // Send the command and get a response
-  set_params(current_baud, current_width | current_parity | current_stopbits);
+  set_params(new_baud, new_width | new_parity | new_stopbits);
+
+  current_baud = new_baud;
+  current_width = new_width;
+  current_parity = new_parity;
+  current_stopbits = new_stopbits;
 
   // translate parameters for the local UART
   uint uart_baud = (uint)(current_baud + 0.5);    // Note we're mangling any fractional part
@@ -586,7 +587,7 @@ void try_packet_echo(int len) {
     put_frame_with_LED(buffer, final_length);
 
     for (int i=0; i < max_tries; i++) {
-      response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
+      response_len = get_frame_with_expected_data_size(buffer, final_length);
       if ((response_len == final_length)
           && (buffer[0] == DIR_RSP)
           && (buffer[1] == CMD_ECHO)
