@@ -8,6 +8,7 @@
 // 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include "pico/stdlib.h"
@@ -40,6 +41,9 @@ int current_width = SSS_SERIAL_DATA_8;
 int current_parity = SSS_SERIAL_PARITY_NONE;
 int current_stopbits = SSS_SERIAL_STOP_BIT_1;
 
+unsigned char width_masks[] = { 0x00, 0x1F, 0x3F, 0x7F, 0xFF };
+#define CURRENT_WIDTH_MASK (width_masks[current_width >> 8])  // convert current_width to a mask
+
 // In serial configuration changes, 0 means leave that parameter alone
 #define STET 0
 
@@ -59,9 +63,10 @@ int current_stopbits = SSS_SERIAL_STOP_BIT_1;
 #define CMD_PARAMS 4
 #define CMD_EXT    0x1f
 
-#define STANDARD_TIMEOUT  5000 // milliseconds
+#define STANDARD_TIMEOUT  20000 // milliseconds
 
-#define	BUFLEN 20010	// big enough for all bytes to be transposed
+#define MAX_DATA_LEN  10000
+#define	BUFLEN (MAX_DATA_LEN*2+10)  // big enough for all bytes to be transposed
 unsigned char buffer[BUFLEN];
 
 
@@ -559,6 +564,40 @@ void change_params(double baud, int width, int parity, int stopbits) {
 }
 
 
+void try_packet_echo(int len) {
+  int response_len;
+  int max_tries = 3;    // try receiving response several times
+  int final_length;
+
+  if (len > MAX_DATA_LEN) {
+    printf("ECHO length is too long.\n");
+    return;
+  }
+
+  // Create an ECHO packet
+  buffer[0] = DIR_CMD;
+  buffer[1] = CMD_ECHO;
+  for (int i=2; i < len+2; i++) {
+    buffer[i] = rand() & CURRENT_WIDTH_MASK;
+  }
+  final_length = add_packet_crc(buffer, len+2);
+
+  while (1) {
+    put_frame_with_LED(buffer, final_length);
+
+    for (int i=0; i < max_tries; i++) {
+      response_len = get_frame_with_timeout(buffer, STANDARD_TIMEOUT);
+      if ((response_len == final_length)
+          && (buffer[0] == DIR_RSP)
+          && (buffer[1] == CMD_ECHO)
+          && check_packet_crc(buffer, response_len)) {
+        return;
+      }
+    }
+  }
+}
+
+
 int main()
 {
   uint actual_baudrate;
@@ -611,6 +650,33 @@ int main()
   obtain_uut_info();
   change_params(9600, STET, STET, STET);
   send_nop_with_junk();
+
+  try_packet_echo(10);
+  try_packet_echo(10);
+  try_packet_echo(10);
+  printf("ECHO 10 worked\n");
+  try_packet_echo(100);
+  try_packet_echo(100);
+  try_packet_echo(100);
+  printf("ECHO 100 worked\n");
+  try_packet_echo(1000);
+  try_packet_echo(1000);
+  try_packet_echo(1000);
+  printf("ECHO 1000 worked\n");
+  try_packet_echo(2000);
+  printf("ECHO 2000 worked\n");
+  try_packet_echo(4000);
+  printf("ECHO 4000 worked\n");
+  try_packet_echo(5000);
+  printf("ECHO 5000 worked\n");
+  try_packet_echo(9500);
+  printf("ECHO 9500 worked\n");
+  try_packet_echo(9999);
+  printf("ECHO 9999 worked\n");
+  try_packet_echo(10000);
+  try_packet_echo(10000);
+  try_packet_echo(10000);
+  printf("ECHO 10,000 worked\n");
 
   puts("Test completed.");
 
