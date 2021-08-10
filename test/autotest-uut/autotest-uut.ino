@@ -101,7 +101,7 @@ while (blocking_read() != FEND);
 // Eat as many FENDs as we find
 while ((chr = blocking_read()) == FEND);
 
-while ((chr != FEND) && (bufp < buf+max_length)) {
+while ((chr != FEND) && (bufp <= buf+max_length)) {
   if (chr == FESC) {
     chr = blocking_read();
     if (chr == TFESC) {
@@ -109,6 +109,7 @@ while ((chr != FEND) && (bufp < buf+max_length)) {
     } else if (chr == TFEND) {
       (*bufp++ = FEND);
     } else {
+      Serial.println("Ill formed frame");
       return 0;             // ill-formed frame
     }
   } else {
@@ -118,8 +119,9 @@ while ((chr != FEND) && (bufp < buf+max_length)) {
   chr = blocking_read();
   }
 
-if (bufp >= buf+max_length)
+if (bufp > buf+max_length)
   {
+  Serial.println("Frame too long");
   return 0;               // frame too big for buffer
   }
 
