@@ -1,6 +1,6 @@
 {
-  "cmake.environment": {
-"PICO_SDK_PATH":"/Users/kb5mu/Documents/pico/pico-sdk"
+  "cmake.configureEnvironment": {
+    "PICO_SDK_PATH": "/Users/kb5mu/pico/pico-sdk"
   },
   "cmake.configureOnOpen": true,
   // These settings tweaks to the cmake plugin will ensure
@@ -13,15 +13,15 @@
       "launch": {
           "visibility": "hidden"
       },
-      "build": {
-          "visibility": "hidden"
-      },
+      //"build": {
+      //    "visibility": "hidden"
+      //},
       "buildTarget": {
           "visibility": "hidden"
       }
   },
   "cmake.buildBeforeRun": true,
-"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-"cortex-debug.openocdPath": "/Users/kb5mu/Documents/pico/openocd/src/openocd",
-"cmake.sourceDirectory": "${workspaceFolder}"
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "cortex-debug.openocdPath": "/Users/kb5mu/Documents/pico/openocd/src/openocd",
+  "cmake.sourceDirectory": "${workspaceFolder}"
 }
