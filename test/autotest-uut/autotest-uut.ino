@@ -48,8 +48,8 @@ const char DBG_MSG_INVALID_PARAMS[] = "Invalid baud rate or serial params";
 #define CMD_PARAMS 4
 #define CMD_EXT    0x1f
 
-// Protocol spec requires us to handle ECHO payloads of up to 10,000 characters.
-#define PACKET_BUF_SIZE 10000 + HEADER_LEN + CHARACTERS_IN_CRC
+// Protocol spec requires us to handle ECHO or BABBLE payloads of up to 10,000 characters.
+#define PACKET_BUF_SIZE (10000 + HEADER_LEN + 2*CHARACTERS_IN_CRC)
 unsigned char packet_buf[PACKET_BUF_SIZE];
 
 #define NUMBER_OF_VALID_SERIAL_CONFIGS  40
@@ -417,17 +417,17 @@ void loop() {
                              put_frame(packet_buf, add_packet_crc(packet_buf, len-CHARACTERS_IN_CRC));  // ECHO response
                              break;
                              
-          case CMD_BABBLE:   if (len < HEADER_LEN + CHARACTERS_IN_CRC) {   // Packet too short
-                                babble_length = 0;
-                             } else {
+          case CMD_BABBLE:   if (len >= HEADER_LEN + CHARACTERS_IN_CRC) {
                                 babble_length = decode_uint32(packet_buf+HEADER_LEN);
-                                if (babble_length > PACKET_BUF_SIZE-(HEADER_LEN+CHARACTERS_IN_CRC)) {
-                                  babble_length = 0;
+                                if (babble_length <= PACKET_BUF_SIZE-(HEADER_LEN+2*CHARACTERS_IN_CRC)) {
+                                  packet_buf[0] = DIR_RSP;
+                                  // packet_buf[1] = CMD_BABBLE;
+                                  // leave the babble length alone
+                                  random_fill(packet_buf+HEADER_LEN+CHARACTERS_IN_CRC, babble_length);
+                                  put_frame(packet_buf, add_packet_crc(packet_buf, HEADER_LEN + CHARACTERS_IN_CRC + babble_length));
                                 }
-                                random_fill(packet_buf+HEADER_LEN, babble_length);
-                             }
-                             put_frame(packet_buf, add_packet_crc(packet_buf, HEADER_LEN + babble_length));    // BABBLE response
-                             break;
+                              }
+                              break;
                              
           case CMD_PARAMS:   if (  (len >= HEADER_LEN + 2 * CHARACTERS_IN_CRC)
                                 && (baud_rate = decode_uint32(packet_buf+HEADER_LEN))
