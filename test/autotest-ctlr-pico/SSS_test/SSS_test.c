@@ -444,17 +444,17 @@ void send_nop_with_junk(void)
   int response_len;
   int max_tries = 3;    // try receiving response several times
 
-    put_frame_with_LED(nop_cmd, len);
+  put_frame_with_LED(nop_cmd, len);
 
-    for (int i=0; i < max_tries; i++) {
-      response_len = get_frame_with_expected_data_size(buffer, 0);
-      if ((response_len >= (2 + CHARACTERS_IN_CRC))
-          && (buffer[0] == DIR_RSP)
-          && (buffer[1] == CMD_NOP)
-          && check_packet_crc(buffer, response_len)) {
-        return;
-      }
+  for (int i=0; i < max_tries; i++) {
+    response_len = get_frame_with_expected_data_size(buffer, 0);
+    if ((response_len >= (2 + CHARACTERS_IN_CRC))
+        && (buffer[0] == DIR_RSP)
+        && (buffer[1] == CMD_NOP)
+        && check_packet_crc(buffer, response_len)) {
+      return;
     }
+  }
 
   printf("NOP with junk failed\n");
   failure();
@@ -487,19 +487,19 @@ void obtain_uut_info(void) {
   int response_len;
   int max_tries = 3;    // try receiving response several times
 
-    put_frame_with_LED(id_cmd, len);
+  put_frame_with_LED(id_cmd, len);
 
-    for (int i=0; i < max_tries; i++) {
-      response_len = get_frame_with_expected_data_size(buffer, 256);
-      if ((response_len >= (2 + CHARACTERS_IN_CRC))
-          && (buffer[0] == DIR_RSP)
-          && (buffer[1] == CMD_ID)
-          && check_packet_crc(buffer, response_len)) {
-        buffer[response_len] = 0;   // null terminate response
-        printf("UUT Info: %s\n", buffer+2);
-        return;
-      }
+  for (int i=0; i < max_tries; i++) {
+    response_len = get_frame_with_expected_data_size(buffer, 256);
+    if ((response_len >= (2 + CHARACTERS_IN_CRC))
+        && (buffer[0] == DIR_RSP)
+        && (buffer[1] == CMD_ID)
+        && check_packet_crc(buffer, response_len)) {
+      buffer[response_len] = 0;   // null terminate response
+      printf("UUT Info: %s\n", buffer+2);
+      return;
     }
+  }
 
   printf("Obtain UUT Info failed.\n");
   failure();
@@ -518,18 +518,18 @@ void set_params(double baud, uint16_t config) {
   encode_uint32(params_cmd+2+8, config);
   add_packet_crc(params_cmd, 18);
 
-    put_frame_with_LED(params_cmd, 26);
+  put_frame_with_LED(params_cmd, 26);
 
-    for (int i=0; i < max_tries; i++) {
-      response_len = get_frame_with_expected_data_size(buffer, 16);
-      if ((response_len == 26)
-          && (buffer[0] == DIR_RSP)
-          && (memcmp(buffer+1, params_cmd+1, 17) == 0)
-          && check_packet_crc(buffer, 26)) {
-            printf("Set baud=%.03f config=0x%04x\n", floor(baud), config);
-            return;
-          }
+  for (int i=0; i < max_tries; i++) {
+    response_len = get_frame_with_expected_data_size(buffer, 16);
+    if ((response_len == 26)
+        && (buffer[0] == DIR_RSP)
+        && (memcmp(buffer+1, params_cmd+1, 17) == 0)
+        && check_packet_crc(buffer, 26)) {
+      printf("Set baud=%.03f config=0x%04x\n", floor(baud), config);
+      return;
     }
+  }
 
   printf("No response to set params command\n");
   failure();
@@ -600,21 +600,58 @@ void try_packet_echo(int len) {
   }
   final_length = add_packet_crc(buffer, len+2);
 
-    put_frame_with_LED(buffer, final_length);
+  put_frame_with_LED(buffer, final_length);
 
-    for (int i=0; i < max_tries; i++) {
-      response_len = get_frame_with_expected_data_size(buffer, final_length);
-      if ((response_len == final_length)
-          && (buffer[0] == DIR_RSP)
-          && (buffer[1] == CMD_ECHO)
-          && check_packet_crc(buffer, response_len)) {
-        return;
-      }
+  for (int i=0; i < max_tries; i++) {
+    response_len = get_frame_with_expected_data_size(buffer, final_length);
+    if ((response_len == final_length)
+        && (buffer[0] == DIR_RSP)
+        && (buffer[1] == CMD_ECHO)
+        && check_packet_crc(buffer, response_len)) {
+      return;
     }
+  }
 
   printf("No response to ECHO command\n");
   failure();
+}
+
+
+// Send a BABBLE command of a specified length and receive the response.
+//
+// We send the BABBLE command just once, but try several times to receive the
+// response; this allows for the UUT to send debug packets or other unexpected
+// responses without failing the test.
+void try_babble(int len) {
+  unsigned char babble_cmd[2 + CHARACTERS_IN_CRC + CHARACTERS_IN_CRC] = { DIR_CMD, CMD_BABBLE };
+  int response_len;
+  int max_tries = 3;    // try receiving response several times
+  int sent_length, recv_length;
+
+  if (len > MAX_DATA_LEN) {
+    printf("BABBLE length is too long.\n");
+    return;
   }
+
+  // Create a BABBLE command packet
+  encode_uint32(babble_cmd+2, len);
+  sent_length = add_packet_crc(babble_cmd, 10);
+  recv_length = sent_length + len;
+
+  put_frame_with_LED(babble_cmd, sent_length);
+
+  for (int i=0; i < max_tries; i++) {
+    response_len = get_frame_with_expected_data_size(buffer, recv_length);
+    if ((response_len == recv_length)
+        && (buffer[0] == DIR_RSP)
+        && (memcmp(buffer+1, babble_cmd+1, 9) == 0)
+        && check_packet_crc(buffer, response_len)) {
+      return;
+    }
+  }
+
+  printf("No response to BABBLE command\n");
+  failure();
 }
 
 
@@ -676,27 +713,18 @@ int main()
   try_packet_echo(10);
   printf("ECHO 10 worked\n");
   try_packet_echo(100);
-  try_packet_echo(100);
-  try_packet_echo(100);
   printf("ECHO 100 worked\n");
   try_packet_echo(1000);
-  try_packet_echo(1000);
-  try_packet_echo(1000);
   printf("ECHO 1000 worked\n");
-  try_packet_echo(2000);
-  printf("ECHO 2000 worked\n");
-  try_packet_echo(4000);
-  printf("ECHO 4000 worked\n");
-  try_packet_echo(5000);
-  printf("ECHO 5000 worked\n");
-  try_packet_echo(9500);
-  printf("ECHO 9500 worked\n");
-  try_packet_echo(9999);
-  printf("ECHO 9999 worked\n");
-  try_packet_echo(10000);
-  try_packet_echo(10000);
   try_packet_echo(10000);
   printf("ECHO 10,000 worked\n");
+
+  try_babble(100);
+  printf("BABBLE 100 worked\n");
+  try_babble(1000);
+  printf("BABBLE 1000 worked\n");
+  try_babble(10000);
+  printf("BABBLE 10000 worked\n");
 
   puts("Test completed.");
 
