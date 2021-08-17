@@ -395,6 +395,17 @@ int add_packet_crc(unsigned char *buf, int len)
 }
 
 
+// Declare a test failure.
+// This means just stop and do nothing. Let the user analyze.
+void failure(void)
+{
+  printf("Test failed.\n");
+  while (1) {
+    tight_loop_contents();
+  }
+}
+
+
 //-------------  Test Routines --------------------
 
 // Send a NOP and try to receive a NOP response.
@@ -433,7 +444,6 @@ void send_nop_with_junk(void)
   int response_len;
   int max_tries = 3;    // try receiving response several times
 
-  while (1) {
     put_frame_with_LED(nop_cmd, len);
 
     for (int i=0; i < max_tries; i++) {
@@ -445,7 +455,9 @@ void send_nop_with_junk(void)
         return;
       }
     }
-  }
+
+  printf("NOP with junk failed\n");
+  failure();
 }
 
 
@@ -465,7 +477,6 @@ void send_nop_with_bad_crc(void)
 
 
 // Get identification info from the UUT and print it.
-// We will keep trying forever if the UUT does not respond.
 //
 // Since we're printing out a message carried in the packet,
 // this is only useful for serial word widths of 7 or 8.
@@ -476,7 +487,6 @@ void obtain_uut_info(void) {
   int response_len;
   int max_tries = 3;    // try receiving response several times
 
-  while (1) {
     put_frame_with_LED(id_cmd, len);
 
     for (int i=0; i < max_tries; i++) {
@@ -490,7 +500,9 @@ void obtain_uut_info(void) {
         return;
       }
     }
-  }
+
+  printf("Obtain UUT Info failed.\n");
+  failure();
 }
 
 
@@ -506,7 +518,6 @@ void set_params(double baud, uint16_t config) {
   encode_uint32(params_cmd+2+8, config);
   add_packet_crc(params_cmd, 18);
 
-  while (1) {
     put_frame_with_LED(params_cmd, 26);
 
     for (int i=0; i < max_tries; i++) {
@@ -519,7 +530,9 @@ void set_params(double baud, uint16_t config) {
             return;
           }
     }
-  }
+
+  printf("No response to set params command\n");
+  failure();
 }
 
 
@@ -565,6 +578,10 @@ void change_params(double baud, int width, int parity, int stopbits) {
 }
 
 
+// Send an ECHO command of the specified length and receive the response.
+//
+// We don't check the actual echoed data against the sent data, because of
+// (feared) memory constraints. Instead, we just check the CRC.
 void try_packet_echo(int len) {
   int response_len;
   int max_tries = 3;    // try receiving response several times
@@ -583,7 +600,6 @@ void try_packet_echo(int len) {
   }
   final_length = add_packet_crc(buffer, len+2);
 
-  while (1) {
     put_frame_with_LED(buffer, final_length);
 
     for (int i=0; i < max_tries; i++) {
@@ -595,6 +611,9 @@ void try_packet_echo(int len) {
         return;
       }
     }
+
+  printf("No response to ECHO command\n");
+  failure();
   }
 }
 
