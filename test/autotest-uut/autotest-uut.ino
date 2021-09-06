@@ -335,6 +335,8 @@ void random_fill(unsigned char *buf, int len) {
 // range of rates we'll allow is 1 to 115200 baud.
 bool validate_baud_rate(uint32_t value) {
   if (value < 1000 || value > 115200000) {
+    Serial.print("Bogus baud rate ");
+    Serial.println(value);
     return false;
   }
     
@@ -352,6 +354,9 @@ bool validate_serial_config(uint32_t value) {
       return true;
     }
   }
+
+  Serial.print("Bogus serial config 0x");
+  Serial.println(value, HEX);
   
   return false;    // Didn't match any known serial configuration
 }
@@ -442,9 +447,9 @@ void loop() {
                                 change_serial_params(0.001 * (double)baud_rate, (uint16_t)serial_config);
                              } else {
                                packet_buf[0] = DIR_DBG;
-                               // leave the CMD_PARAMS command code in packet_buf[1]
-                               memcpy(packet_buf+HEADER_LEN, DBG_MSG_INVALID_PARAMS, strlen(DBG_MSG_INVALID_PARAMS));
-                               put_frame(packet_buf, add_packet_crc(packet_buf, HEADER_LEN + strlen(DBG_MSG_INVALID_PARAMS)));
+                               // leave the CMD_PARAMS command code and parameters in packet_buf[1]
+                               memcpy(packet_buf+HEADER_LEN+2*CHARACTERS_IN_CRC, DBG_MSG_INVALID_PARAMS, strlen(DBG_MSG_INVALID_PARAMS));
+                               put_frame(packet_buf, add_packet_crc(packet_buf, HEADER_LEN + 2*CHARACTERS_IN_CRC + strlen(DBG_MSG_INVALID_PARAMS)));
                              }
                              break;
                              
