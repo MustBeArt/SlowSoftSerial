@@ -2,39 +2,41 @@ import array
 import string
 import struct
 import sys
+import typing
 import zlib
 from collections import namedtuple
+from typing import List, Optional, Tuple, Union
 
-DUMP_CHARACTERS = 0
+DUMP_CHARACTERS: int = 0
 
 # tolerance in bauds for edge placement and glitch bursts
-epsilon = 1.0 / 16.0
+epsilon: float = 1.0 / 16.0
 
 # default serial parameters; all traces should start with these
-baudrate = 9600
-onebaud = 1.0 / baudrate
-num_data_bits = 8  # could be 5, 6, 7, 8
-num_data_and_parity_bits = 8  # could be 5, 6, 7, 8, or 9
-num_stop_bits = 1  # could be 1, 1.5, or 2
-parity_type = "N"  # could be N, O, E, M, S
+baudrate: float = 9600.0
+onebaud: float = 1.0 / baudrate
+num_data_bits: int = 8  # could be 5, 6, 7, 8
+num_data_and_parity_bits: int = 8  # could be 5, 6, 7, 8, or 9
+num_stop_bits: float = 1.0  # could be 1, 1.5, or 2
+parity_type: str = "N"  # could be N, O, E, M, S
 
 # Special characters for framing packets in SlowSoftSerial test protocol
-FEND = 0x10  # Frame End (and beginning)
-FESC = 0x1B  # Frame Escape
-TFEND = 0x1C  # Transposed Frame End
-TFESC = 0x1D  # Transposed Frame Escape
+FEND: int = 0x10  # Frame End (and beginning)
+FESC: int = 0x1B  # Frame Escape
+TFEND: int = 0x1C  # Transposed Frame End
+TFESC: int = 0x1D  # Transposed Frame Escape
 
 # initial conditions for interpreting packets
-packet_state = None
-esc_state = None
-packet = bytearray()
-packet_start_time = 123.456
+in_packet: bool = False
+in_escape_seq: bool = False
+packet: bytearray = bytearray()
+packet_start_time: float = 0
 
 # PARAM packet decoding
 # 4-bit fields need 16 entries for safe lookup
-width_decode = [0, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-parity_decode = [0, "E", "O", "N", "M", "S", "X", "X", "X", "X", "X", "X", "X", "X", "X", "X"]
-stop_decode = [0, 1, 1.5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+width_decode: List[int] = [0, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+parity_decode: List[str] = ["X", "E", "O", "N", "M", "S", "X", "X", "X", "X", "X", "X", "X", "X", "X", "X"]
+stop_decode: List[float] = [0, 1, 1.5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 # For parsing Saleae Logic 2.0 binary-format capture files.
 # see https://support.saleae.com/faq/technical-faq/binary-export-format-logic-2
@@ -48,7 +50,7 @@ DigitalData = namedtuple(
 )
 
 
-def parse_digital(f):
+def parse_digital(f: typing.BinaryIO) -> DigitalData:
     """Parse a logic analyzer capture file in Saleae Logic 2.0 binary format"""
     # Parse header
     identifier = f.read(8)
@@ -70,8 +72,8 @@ def parse_digital(f):
     return DigitalData(initial_state, begin_time, end_time, num_transitions, transition_times)
 
 
-def decode_32bit_value(packet):
-    """Decode a 32-bit value from the 4 LSBits of 8 bytes, as used for
+def decode_32bit_value(packet: bytearray) -> int:
+    """Decode a 32-bit value from the 4 LSBits of the last 8 bytes, as used for
     both CRCs and integer parameters in the SlowSoftSerial test protocol"""
 
     if len(packet) != 8:
@@ -91,7 +93,7 @@ def decode_32bit_value(packet):
     return value
 
 
-def check_crc(packet):
+def check_crc(packet: bytearray) -> bool:
     """Check the CRC in a packet in SlowSoftSerial test protocol format
     and return True if the CRC is good. Diagnose a bad CRC and return False."""
 
@@ -108,7 +110,7 @@ def check_crc(packet):
         return False
 
 
-def describe_packet(packet, start_time, end_time):
+def describe_packet(packet: bytearray, start_time: float, end_time: float) -> str:
     """Analyze the contents of a packet in SlowSoftSerial test protocol format
     and return a one-line description of the packet. Also, process the PARAMS Response
     packet to enable this program to follow changes in baud rate and serial configuration."""
@@ -194,10 +196,10 @@ def describe_packet(packet, start_time, end_time):
     return description
 
 
-def process_character(char, char_start_time, char_end_time):
+def process_character(char: int, char_start_time: float, char_end_time: float) -> None:
     """Process a single successfully-received character"""
 
-    global packet_state, packet, esc_state, packet_start_time
+    global in_packet, packet, in_escape_seq, packet_start_time
 
     if DUMP_CHARACTERS:
         if char == FEND:
@@ -207,12 +209,12 @@ def process_character(char, char_start_time, char_end_time):
         else:
             print(f"{char:02x}", end=" ")
 
-    if packet_state == None:  # looking for starting flag
+    if not in_packet:  # looking for starting flag
         if char == FEND:  # Here's the start of a packet
             if len(packet) != 0:  # found some garbage between packets
                 print(f"Non-packet data, {len(packet)} characters")
                 packet = bytearray()  # discard the garbage, start empty
-            packet_state = 1
+            in_packet = True
             packet_start_time = char_start_time
         else:
             packet.extend(char.to_bytes(1, "big"))  # save non-packet garbage
@@ -220,46 +222,55 @@ def process_character(char, char_start_time, char_end_time):
         if char == FEND:  # here's the proper end of the packet
             print(describe_packet(packet, packet_start_time, char_end_time))
             packet = bytearray()  # discard processed packet
-            packet_state = None
+            in_packet = False
         else:
             if char == FESC:
-                esc_state = 1
+                in_escape_seq = True
                 return  # this was the first of a two-byte sequence
-            elif esc_state:
-                esc_state = None
+            elif in_escape_seq:
+                in_escape_seq = False
                 if char == TFESC:  # TFESC
                     char = FESC  # transpose to FESC
                 elif char == TFEND:  # TFEND
                     char = FEND  # transpose to FEND
                 else:  # ill-formed framing
-                    packet_state = None
+                    in_packet = False
                     return
             packet.extend(char.to_bytes(1, "big"))  # add the (de-escaped) character to packet
 
 
-def strip_parity(char):
-    """Check the parity bit (if any in the current configuration). If it checks,
-    return the character with parity stripped off. If it doesn't, return None."""
+def strip_parity(char: int) -> Tuple[int, bool]:
+    """Check the parity bit (if called for in the current configuration).
+    Return a tuple of which the first element is the data bits received
+    (even if parity did not check) and the second is a boolean that is
+    True when parity was correct."""
 
     parity_bit = (char & (1 << num_data_bits)) != 0
-
-    if parity_type == "M" and parity_bit == 0:
-        return None
-    elif parity_type == "S" and parity_bit == 1:
-        return None
-
     data_bits = char & ((1 << num_data_bits) - 1)
-    computed_even_parity = (0x6996 >> ((data_bits ^ (data_bits >> 4)) & 0x0F)) & 0x01
+    computed_even_parity = bool((0x6996 >> ((data_bits ^ (data_bits >> 4)) & 0x0F)) & 0x01)
 
-    if parity_type == "E" and parity_bit != computed_even_parity:
-        return None
-    elif parity_type == "O" and parity_bit == computed_even_parity:
-        return None
+    if parity_type == "N":
+        return data_bits, True
+    elif parity_type == "M":
+        if parity_bit == 0:
+            return data_bits, False
+    elif parity_type == "S":
+        if parity_bit == 1:
+            return data_bits, False
+    elif parity_type == "E":
+        if parity_bit != computed_even_parity:
+            return data_bits, False
+    elif parity_type == "O":
+        if parity_bit == computed_even_parity:
+            return data_bits, False
+    else:
+        print(f"Unknown parity type {parity_type}")
+        sys.exit(1)
 
-    return data_bits
+    return data_bits, True
 
 
-def receive_char_from(data, start_bit_transition):
+def receive_char_from(data: DigitalData, start_bit_transition: int) -> int:
     """Start at transition index and process one character's worth of transitions,
     returning the index of the presumed start bit of the next character."""
 
@@ -267,8 +278,9 @@ def receive_char_from(data, start_bit_transition):
     transition = start_bit_transition + 1
     previous_tbaud = 0
     level_before = 1  # logical level of the signal BEFORE this transition
-    state = "start_bit"  # after 'start_bit', state counts up from 0 to data bits + parity bits
-    char = 0  # start with an empty character; we'll OR in a 1 when we see a high bit
+    START_BIT: int = -1
+    state: int = START_BIT  # after START_BIT, state counts up from 0 to data bits + parity bits
+    char: int = 0  # start with an empty character; we'll OR in a 1 when we see a high bit
     # if parity is in use, we'll put that bit in here too, above the MSbit
 
     while transition < data.num_transitions:
@@ -285,7 +297,7 @@ def receive_char_from(data, start_bit_transition):
             continue
         previous_tbaud = tbaud
 
-        if state == "start_bit":
+        if state == START_BIT:
             if tbaud < (1 - epsilon) or level_before == 1:
                 # framing error: transition during a start bit or finished start bit with signal high
                 print(f"Framing error: broken start bit at {t=}")
@@ -329,9 +341,9 @@ def receive_char_from(data, start_bit_transition):
             print(f"Framing error: wrong level during stop bit(s) at {t=}")
             return start_bit_transition + 2  # earliest possible start bit candidate
 
-        char = strip_parity(char)
-        if char != None:
-            process_character(char, t0, t0 + onebaud * (1 + num_data_and_parity_bits + num_stop_bits))
+        data_bits, parity_good = strip_parity(char)
+        if parity_good:
+            process_character(data_bits, t0, t0 + onebaud * (1 + num_data_and_parity_bits + num_stop_bits))
         else:
             print(f"Parity error at {t=}")
 
