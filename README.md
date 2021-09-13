@@ -92,6 +92,10 @@ Settings.
 
 See [SlowSoftSerial Design Notes](SlowSoftSerial%20design%20notes.pdf)
 
+## Testing
+
+A setup for mostly-automated testing of SlowSoftSerial is given in
+the test directory.
 ## Examples
 
 Example sketches demonstrating SlowSoftSerial port are included in
@@ -125,12 +129,16 @@ terminal emulator or serial analyzer, or you can hook up a jumper
 between the RX and TX pins and see the results in the USB serial
 monitor.
 
+See also the test setup in the test directory.
+
 ## License
 
 This project is licensed under GPLv3.
 
-## Maturity = Late Alpha
+## Maturity = Beta
 
 SlowSoftSerial has been bench tested on Teensy 3.5 and Teensy 4.0,
-and has been successfully integrated with the Cadetwriter firmware,
-but it has not been battle tested in the field yet.
+and has been successfully integrated with the Cadetwriter firmware.
+It has been subjected to automated tests of every supported serial
+port configuration, at standard baud rates from 45.45 to 19200.
+However, it has not yet been battle tested in the field.
