@@ -562,9 +562,10 @@ void cycle_all_params(void)
   int num_parity_modes = 5;
 
   int stopbit_modes[] = { SSS_SERIAL_STOP_BIT_1,
+                          SSS_SERIAL_STOP_BIT_1_5,
                           SSS_SERIAL_STOP_BIT_2,
                         };
-  int num_stopbit_modes =  2;
+  int num_stopbit_modes =  3;
 
   for (int baud_i = 0; baud_i < num_baud_rates; baud_i++) {
     for (int width_j = 0; width_j < num_word_widths; width_j++) {
@@ -597,7 +598,7 @@ void setup() {
 
   while (!Serial);
 
-  Serial.println("Hello, this is the Slow Soft Serial test controller");
+  Serial.println("Slow Soft Serial test controller 0.2");
 
   // First emit some unformatted stuff for sanity check
   sss.write("Hello UART number one!\r\n");
