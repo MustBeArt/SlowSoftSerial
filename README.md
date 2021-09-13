@@ -124,4 +124,4 @@ SlowSoftSerial has been bench tested on Teensy 3.5 and Teensy 4.0,
 and has been successfully integrated with the Cadetwriter firmware.
 It has been subjected to automated tests of every supported serial
 port configuration, at standard baud rates from 45.45 to 19200.
-However, it has not yes been battle tested in the field.
+However, it has not yet been battle tested in the field.
