@@ -474,7 +474,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x10;
             _fill_op_table(5,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_6N15:
@@ -486,7 +486,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x20;
             _fill_op_table(6,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_7N15:
@@ -498,7 +498,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x40;
             _fill_op_table(7,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_8N15:
@@ -510,7 +510,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x80;
             _fill_op_table(8,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_5E15:
@@ -522,7 +522,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x20;
             _fill_op_table(6,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_6E15:
@@ -534,7 +534,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x40;
             _fill_op_table(7,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_7E15:
@@ -546,7 +546,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x80;
             _fill_op_table(8,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_8E15:
@@ -558,7 +558,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x100;
             _fill_op_table(9,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_5O15:
@@ -570,7 +570,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x20;
             _fill_op_table(6,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_6O15:
@@ -582,7 +582,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x40;
             _fill_op_table(7,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_7O15:
@@ -594,7 +594,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x80;
             _fill_op_table(8,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_8O15:
@@ -606,7 +606,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x100;
             _fill_op_table(9,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_5M15:
@@ -618,7 +618,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x20;
             _fill_op_table(6,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_6M15:
@@ -630,7 +630,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x40;
             _fill_op_table(7,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_7M15:
@@ -642,7 +642,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x80;
             _fill_op_table(8,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_8M15:
@@ -654,7 +654,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x100;
             _fill_op_table(9,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_5S15:
@@ -666,7 +666,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x20;
             _fill_op_table(6,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_6S15:
@@ -678,7 +678,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x40;
             _fill_op_table(7,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_7S15:
@@ -690,7 +690,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x80;
             _fill_op_table(8,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
             break;
 
         case SSS_SERIAL_8S15:
@@ -702,7 +702,7 @@ void SlowSoftSerial::begin(double baudrate, uint16_t config) {
             _rx_shiftin_bit = 0x100;
             _fill_op_table(9,SSS_SERIAL_STOP_BIT_1_5);
             _tx_halfbaud = 1;
-            _baud_microseconds = _baud_microseconds/2.0;
+            _tx_microseconds = _tx_microseconds/2.0;
            break;
 
         default:
@@ -850,7 +850,7 @@ size_t SlowSoftSerial::write(uint8_t chr) {
     // Note: we waste a baud before starting to transmit, in order
     // to keep the transmit logic all in one place (the interrupt)
     if (!_tx_running) {
-        if (_tx_timer.begin(_tx_trampoline, _baud_microseconds)) {
+        if (_tx_timer.begin(_tx_trampoline, _tx_microseconds)) {
             _tx_running = true;
             _tx_baud_divider = _tx_halfbaud;    // only waste half a baud in 1.5 stop bits case
         }
@@ -952,7 +952,7 @@ void SlowSoftSerial::_tx_baud_handler(void) {
     if (_tx_extra_half_stop) {
         // We've sent the first 1 stop bit, now send a half-baud more
         _tx_extra_half_stop = 0;
-        _tx_divider = 1;    // this jumps timing by half a baud
+        _tx_baud_divider = 1;    // this jumps timing by half a baud
         return;
     }
 
@@ -984,7 +984,7 @@ void SlowSoftSerial::_tx_baud_handler(void) {
 
 
 void _tx_trampoline(void) {
-    if (_tx_halfbaud) {
+    if (instance_p->_tx_halfbaud) {
         instance_p->_tx_halfbaud_handler();
     } else {
         instance_p->_tx_baud_handler();
