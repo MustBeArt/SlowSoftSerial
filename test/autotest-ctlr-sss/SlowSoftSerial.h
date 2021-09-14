@@ -136,7 +136,9 @@ class SlowSoftSerial : public Stream
 
     // Unfortunately, this has to be public because of the horrific workaround
     // needed to register a callback with IntervalTimer or attachInterrupt.
-    void _tx_handler(void);
+    void _tx_baud_handler(void);
+    void _tx_halfbaud_handler(void);
+    bool _tx_halfbaud;          // flag: double the interrupt rate for 1.5 stop bits case
     void _rx_timer_handler(void);
     void _rx_start_handler(void);
 
@@ -177,7 +179,6 @@ class SlowSoftSerial : public Stream
     int _tx_bit_count;
     bool _tx_enabled = true;
     bool _tx_running = false;
-    bool _tx_halfbaud;          // flag: double the interrupt rate for 1.5 stop bits case
     bool _tx_baud_divider;      // in 1.5 stop bit case, toggles 0 1 to halve the interrupt rate
     bool _tx_extra_half_stop;   // flag: we need to add an extra half stop bit to this character
 
