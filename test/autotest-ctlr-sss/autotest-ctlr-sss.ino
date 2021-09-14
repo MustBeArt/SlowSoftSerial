@@ -445,6 +445,7 @@ void change_params(double baud, int width, int parity, int stopbits) {
   int new_parity = (parity == STET) ? current_parity : parity;
   int new_stopbits = (stopbits == STET) ? current_stopbits : stopbits;
   uint16_t new_config = new_width | new_parity | new_stopbits;
+  int old_bittime_ms = (int)(1000.0/current_baud);
 
   // Send the command and get a response
   set_params(new_baud, new_config);
@@ -460,7 +461,7 @@ void change_params(double baud, int width, int parity, int stopbits) {
   sss.begin(current_baud, current_serial_config);
 
   // Wait for UUT to execute the change
-  delay(1);
+  delay(1 + old_bittime_ms);
 }
 
 
@@ -543,8 +544,8 @@ void try_babble(int len) {
 
 void cycle_all_params(void)
 {
-  double baud_rates[] = {9600, 4800, 2400, 1200, 300, 150, 110, 45.45};
-  int num_baud_rates = 8;
+  double baud_rates[] = {19200, 9600, 4800, 2400, 1200, 300, 150, 110, 45.45};
+  int num_baud_rates = 9;
 
   int word_widths[] = { SSS_SERIAL_DATA_8,
                         SSS_SERIAL_DATA_7,
@@ -562,9 +563,10 @@ void cycle_all_params(void)
   int num_parity_modes = 5;
 
   int stopbit_modes[] = { SSS_SERIAL_STOP_BIT_1,
+                          SSS_SERIAL_STOP_BIT_1_5,
                           SSS_SERIAL_STOP_BIT_2,
                         };
-  int num_stopbit_modes =  2;
+  int num_stopbit_modes =  3;
 
   for (int baud_i = 0; baud_i < num_baud_rates; baud_i++) {
     for (int width_j = 0; width_j < num_word_widths; width_j++) {
@@ -597,7 +599,7 @@ void setup() {
 
   while (!Serial);
 
-  Serial.println("Hello, this is the Slow Soft Serial test controller");
+  Serial.println("Slow Soft Serial test controller 0.2");
 
   // First emit some unformatted stuff for sanity check
   sss.write("Hello UART number one!\r\n");

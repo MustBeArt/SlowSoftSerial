@@ -4,6 +4,7 @@
 
 #define RX_PIN 0
 #define TX_PIN 1
+#define CTS_PIN 18
 
 SlowSoftSerial sss((uint8_t)RX_PIN, (uint8_t)TX_PIN);
 
@@ -63,6 +64,8 @@ void setup() {
   Serial.begin(BAUDRATE);
 
   while (!Serial);
+
+  sss.attachCts((uint8_t)CTS_PIN);
 }
 
 
