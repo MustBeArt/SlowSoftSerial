@@ -12,7 +12,8 @@ the needed word length, parity, and stop bit settings.
 
 ## Features
 
-* Wide range of (slower) baud rates from 1 baud to 9600+ baud
+* Wide range of (slower) baud rates from 1 baud to 9600+ baud,
+all with essentially perfect accuracy
 
 * RX and TX on ANY two GPIO pins on the Teensy
 
@@ -23,7 +24,14 @@ per the Arduino serial API definition: 5N1, 6N1, 7N1, 8N1, 5N2,
 6N2, 7N2, 8N2, 5E1, 6E1, 7E1, 8E1, 5E2, 6E2, 7E2, 8E2, 5O1, 6O1,
 7O1, 8O1, 5O2, 6O2, 7O2, and 8O2
 
-* Arbitrary non-standard baud rates like 45.45 baud or 123.45 baud
+* Additional support for 1.5 stop bit modes: 5N15, 6N15, 7N15,
+8N15, 5E15, 6E15, 7E15, 8E15, 5O15, 6O15, 7O15, and 8O15
+
+* Additional support for mark and space parity modes: 5M1, 6M1,
+7M1, 8M1, 5M15, 6M15, 7M15, 8M15, 5M2, 6M2, 7M2, 8M2, 5S1, 6S1,
+7S1, 8S1, 5S15, 6S15, 7S15, 8S15, 5S2, 6S2, 7S2, 8S2
+
+* Arbitrary non-standard baud rates like 45.45 baud or 456.78 baud
 
 * Support for inverted signaling voltages
 
@@ -51,11 +59,20 @@ four on the Teensy 3.x or 4.0)
 * Only one active SlowSoftSerial port at a time is currently supported,
 but you can have multiple ports defined and switch between them.
 
+* Parity is not checked on receive, because the Arduino API has no way
+to report parity errors.
+
 * No support (yet) for built-in hardware flow control handshaking on
 receive (because Cadetwriter does this at the application level).
 
 * No support (yet) for built-in software XON/XOFF flow control in
 either direction.
+
+* No support for 9-bit or longer characters.
+
+* The first transmitted character after a pause is delayed an extra
+bit time (half a bit time for 1.5 stop bit modes) just to keep the
+code prettier. (Buffered characters are sent with no extra delay.)
 
 ## Installation
 
@@ -97,8 +114,8 @@ monitor. The demo enables CTS hardware handshaking on transmit.
 Serial port, in both directions. Wire up your port to a terminal
 emulator and you can type back and forth between the terminal emulator
 and the Arduino IDE's serial monitor. Try pasting a longer text into
-the terminal emulator (but note, there is no flow control built in
-to SlowSoftSerial at this time).
+the terminal emulator (but note, there is no receive flow control
+built in to SlowSoftSerial at this time).
 
 * __DuelingPorts__ demonstrates the use of multiple SlowSoftSerial
 ports (with only one being active at a time).

@@ -78,6 +78,27 @@
 #define SSS_SERIAL_7S2           (SSS_SERIAL_STOP_BIT_2 | SSS_SERIAL_PARITY_SPACE | SSS_SERIAL_DATA_7)
 #define SSS_SERIAL_8S2           (SSS_SERIAL_STOP_BIT_2 | SSS_SERIAL_PARITY_SPACE | SSS_SERIAL_DATA_8)
 
+#define SSS_SERIAL_5N15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_NONE  | SSS_SERIAL_DATA_5)
+#define SSS_SERIAL_6N15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_NONE  | SSS_SERIAL_DATA_6)
+#define SSS_SERIAL_7N15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_NONE  | SSS_SERIAL_DATA_7)
+#define SSS_SERIAL_8N15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_NONE  | SSS_SERIAL_DATA_8)
+#define SSS_SERIAL_5E15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_EVEN  | SSS_SERIAL_DATA_5)
+#define SSS_SERIAL_6E15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_EVEN  | SSS_SERIAL_DATA_6)
+#define SSS_SERIAL_7E15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_EVEN  | SSS_SERIAL_DATA_7)
+#define SSS_SERIAL_8E15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_EVEN  | SSS_SERIAL_DATA_8)
+#define SSS_SERIAL_5O15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_ODD   | SSS_SERIAL_DATA_5)
+#define SSS_SERIAL_6O15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_ODD   | SSS_SERIAL_DATA_6)
+#define SSS_SERIAL_7O15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_ODD   | SSS_SERIAL_DATA_7)
+#define SSS_SERIAL_8O15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_ODD   | SSS_SERIAL_DATA_8)
+#define SSS_SERIAL_5M15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_MARK  | SSS_SERIAL_DATA_5)
+#define SSS_SERIAL_6M15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_MARK  | SSS_SERIAL_DATA_6)
+#define SSS_SERIAL_7M15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_MARK  | SSS_SERIAL_DATA_7)
+#define SSS_SERIAL_8M15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_MARK  | SSS_SERIAL_DATA_8)
+#define SSS_SERIAL_5S15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_SPACE | SSS_SERIAL_DATA_5)
+#define SSS_SERIAL_6S15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_SPACE | SSS_SERIAL_DATA_6)
+#define SSS_SERIAL_7S15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_SPACE | SSS_SERIAL_DATA_7)
+#define SSS_SERIAL_8S15          (SSS_SERIAL_STOP_BIT_1_5 | SSS_SERIAL_PARITY_SPACE | SSS_SERIAL_DATA_8)
+
 class SlowSoftSerial : public Stream
 {
   public:
@@ -115,7 +136,9 @@ class SlowSoftSerial : public Stream
 
     // Unfortunately, this has to be public because of the horrific workaround
     // needed to register a callback with IntervalTimer or attachInterrupt.
-    void _tx_handler(void);
+    void _tx_baud_handler(void);
+    void _tx_halfbaud_handler(void);
+    bool _tx_halfbaud;          // flag: double the interrupt rate for 1.5 stop bits case
     void _rx_timer_handler(void);
     void _rx_start_handler(void);
 
@@ -127,8 +150,8 @@ class SlowSoftSerial : public Stream
     void _fill_op_table(int rxbits, int stopbits);
 
     // port configuration
-    double _baud_microseconds;      // one baud in microseconds
-    double _rx_microseconds;        // receive sample rate
+    double _tx_microseconds;        // transmit interrupt duration (1x or 2x the baud rate)
+    double _rx_microseconds;        // receive sample duration (4x the baud rate)
     uint16_t _parity;               // use definitions above, like ones in HardwareSerial.h
     uint8_t _num_bits_to_send;      // includes parity and stop bit(s) but not start bit
     uint16_t _parity_bit;           // bitmask for the parity bit; 0 if no parity
@@ -156,6 +179,8 @@ class SlowSoftSerial : public Stream
     int _tx_bit_count;
     bool _tx_enabled = true;
     bool _tx_running = false;
+    bool _tx_baud_divider;      // in 1.5 stop bit case, toggles 0 1 to halve the interrupt rate
+    bool _tx_extra_half_stop;   // flag: we need to add an extra half stop bit to this character
 
     // receive buffer and its variables
     volatile int _rx_buffer_count;
