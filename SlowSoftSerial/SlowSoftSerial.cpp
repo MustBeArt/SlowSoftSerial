@@ -510,7 +510,9 @@ void SlowSoftSerial::end(bool releasePins) {
     if (releasePins == SSS_RELEASE_PINS) {
         pinMode(_txPin, INPUT);
         pinMode(_rxPin, INPUT);
-        pinMode(_ctsPin, INPUT);
+        if (_cts_attached) {
+            pinMode(_ctsPin, INPUT);
+        }
     }
 
     _tx_buffer_count = 0;
